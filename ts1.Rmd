@@ -93,8 +93,13 @@ The dataset used for this project is [Daily Delhi Climate](https://www.kaggle.co
 
 ## **Goal and Procedure**
 The goal of this project is to analyze and forecast the mean temperature Delhi, which is recorded in the meantemp column.
-For this, after importing the dataset, outliers are removed in [Preprocessing Section](#preprocess). Then meantemp column is assigned to a time series object in [Time Series Construct]{#initts} for further processing, analysis, and forecast.
+For this, after importing the dataset, outliers are removed in [Preprocessing Section](#preprocess) section. Then meantemp column is assigned to a time series object in [Time Series Construct]{#initts} section for further processing, analysis, and forecast.
 After detecting seasonalities using [plots]{#seasplots}, the time series is [seasonally adjusted]{#deseas} using [X13-ARIMA-SEATS](https://cran.r-project.org/package=seasonal/vignettes/seas.pdf). Then, remaining trend is removed in [detrend]{#detrend}.
+
+Before forecasting the time series, I check for stationarity of time series, as stationarity is an assumption in ARIMA model.
+For this purpose, unit root tests are applied in [Stationarity](#stationary) section.
+
+Finally, I used ARIMA model to forecast the time series in [Forecast Time Series](#forecast) section.
 
 ```{r}
 
@@ -397,12 +402,20 @@ plot(ts_train_adj_det)
 
 
 ## **Correlation Plots**
+1. Weekly aggregated of original time series
 ```{r}
-ggAcf(ts_mon_train, lag=50)
-pacf (ts_mon_train, lag=50, pl = TRUE)
+ggAcf(ts_week_train, lag=50)
+pacf (ts_week_train, lag=50, pl = TRUE)
 ```
 
+2. Seasonally Adjusted
 
+```{r}
+ggAcf(ts_train_adj, lag=10)
+pacf (ts_train_adj, lag=10, pl = TRUE)
+```
+
+3. Seasonally Adjusted and Detrended
 ```{r}
 ggAcf(ts_train_adj_det, lag=10)
 pacf (ts_train_adj_det, lag=10, pl = TRUE)
@@ -412,39 +425,45 @@ pacf (ts_train_adj_det, lag=10, pl = TRUE)
 
 
 
-## **Testing Stationarity: Unit Root Tests**
+## **Testing Stationarity: Unit Root Tests** {#stationary}
 ### **ADF**
 
+1. Original Time Series
 ```{r}
 ts_train |> adf.test()
 ```
+2. Seasonally Adjusted
 ```{r}
 ts_train_adj |> adf.test() 
 ```
 
 
+3. Seasonally Adjusted and Detrended
 ```{r}
 ts_train_adj_det |> adf.test() 
 ```
 
 ### **KPSS**
-
+1. Original Time Series 
 ```{r}
 ts_train |> ur.kpss() |> summary()
 ```
 
+2. Seasonally Adjusted
 ```{r}
 ts_train_adj |> ur.kpss() |> summary()
 ```
+
+3. Seasonally Adjusted and Detrended
 ```{r}
 ts_train_adj_det |> ur.kpss() |> summary()
 ```
 
-## Forecast
+# **Time Series Forecasting** {#forecast}
 
-### AUTO-ARIMA
+## **AUTO-ARIMA**
 
-Forecast original time series of meantemp:
+1. Forecast original time series of meantemp:
 ```{r}
 
 
@@ -456,9 +475,13 @@ forecast_ts_train = auto.arima(ts_train,
 checkresiduals(forecast_ts_train)
 ```
 
+```{r}
+autoplot(forecast(forecast_ts_train))
+```
 
 
-Forecast deseasonalized time series:
+
+2. Forecast deseasonalized time series:
 ```{r}
 
 
@@ -467,10 +490,16 @@ forecast_ts_train_adj = auto.arima(ts_train_adj,
                             seasonal= FALSE,
                             stepwise=FALSE,
                             approximation=FALSE)
+checkresiduals(forecast_ts_train_adj)
+```
+
+```{r}
+autoplot(forecast(forecast_ts_train_adj))
 ```
 
 
-Forecast deseasonalized and detrended time series:
+
+3. Forecast deseasonalized and detrended time series:
 ```{r}
 
 
@@ -479,10 +508,11 @@ forecast_ts_train_adj_det = auto.arima(ts_train_adj_det,
                             seasonal= FALSE,
                             stepwise=FALSE,
                             approximation=FALSE)
+checkresiduals(forecast_ts_train_adj_det)
 ```
 
 ```{r}
-
+autoplot(forecast(forecast_ts_train_adj_det))
 ```
 
 
