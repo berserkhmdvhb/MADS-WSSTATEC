@@ -581,3 +581,36 @@ fig <- fig %>%
 
 fig
 ```
+
+```{r}
+xts_train_meantemp <- xts(df_train$meantemp, order.by=df_train$date, "%Y-%m-%d")
+ts_train_meantemp <-ts_ts(xts_train_meantemp)
+
+xts_train_windspeed <- xts(df_train$wind_speed, order.by=df_train$date, "%Y-%m-%d")
+ts_train_windspeed <-ts_ts(xts_train_windspeed)
+VAR_data <- ts.union(ts_train_meantemp, ts_train_windspeed)
+#VAR_data <- window(ts.union(GDPGrowth, TSpread), start = c(1980, 3), end = c(2012, 4))
+
+```
+
+Now that we have merged the column `meantemp` with `wind_speed`, we use VAR models:
+
+```{r}
+VAR_est <- VAR(y = VAR_data)
+VAR_est
+
+```
+
+```{r}
+summary(VAR_est$varresult$ts_train_meantemp)$adj.r.squared
+```
+
+```{r}
+summary(VAR_est$varresult$ts_train_windspeed)$adj.r.squared
+```
+
+
+```{r}
+forecasts <- predict(VAR_est)
+```
+
