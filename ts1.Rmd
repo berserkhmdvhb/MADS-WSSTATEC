@@ -55,9 +55,9 @@ library(tidyverse) # general
 library(plotly) #for drawing interactive plots
 library(ggridges) #for drawing density gradient
 library(shades) #edit colors in natural ways:
-library(urca) #
-
+library(urca) 
 library(tseries)
+library(vars) # for VAR models
 
 ```
 
@@ -108,6 +108,7 @@ Finally, I used ARIMA model to forecast the time series in [Forecast Time Series
 ```{r}
 
 df_train <- read_csv("data/DailyDelhiClimateTrain.csv")
+df_test <- read_csv("data/DailyDelhiClimateTest.csv")
 ```
 
 ```{r}
@@ -146,7 +147,7 @@ df_train$meantemp[df_train$date == as.Date('2017-01-01')]<- previous_value
 
 ```{r}
 #df_train <- head(df_train, -1)
-
+head(df_train)
 ```
 
 ```{r}
@@ -513,7 +514,8 @@ checkresiduals(forecast_ts_train_adj)
 ```
 
 ```{r}
-autoplot(forecast(forecast_ts_train_adj))
+#forecast_ts_train_adj + ts_train_adj
+autoplot(forecast(forecast_ts_train_adj ))
 ```
 
 
@@ -537,3 +539,45 @@ autoplot(forecast(forecast_ts_train_adj_det))
 
 
 `r colorize("Q4. I did all unit root tests and ARIMA models on all the following datasets: original time series, deseasonalized time series, and combination of deaseonalized and detrended time series. Judging by the plots, the adjusted versions performed poorly when fed to the model compared to feeding the weekly aggregated data that is fed to AUTOARIMA but with autmatic seasonality modelling of seasonality. Could you please share your viewpoint regarding this?", "red")`
+
+
+
+## **VAR**
+
+```{r}
+ts_plot(ts(df_train$wind_speed))
+p2 <- df_train |>
+  ggplot( aes(x=date, y=wind_speed)) +
+    geom_area(fill="#69b3a2", alpha=0.5) +
+    geom_line(color="#69b3a2") +
+    ylab("bitcoin price ($)") +
+    theme_ipsum()
+
+# Turn it interactive with ggplotly
+p2 <- ggplotly(p2)
+#p
+p2
+```
+
+
+
+```{r}
+fig <- plot_ly(df_train, type = 'scatter', mode = 'lines')%>%
+  add_trace(x = ~date, y = ~meantemp, name = 'MeanTemp')%>%
+  add_trace(x = ~date, y = ~wind_speed, name = 'WindSpeed')%>%
+  layout(title = 'custom tick labels',legend=list(title=list(text='variable')),
+         xaxis = list(dtick = "M1", tickformat= "%b\n%Y"), width = 2000)
+options(warn = -1)
+fig <- fig %>%
+  layout(
+         xaxis = list(zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff',  tickangle = 0),
+         yaxis = list(zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         plot_bgcolor='#e5ecf6')
+
+
+fig
+```

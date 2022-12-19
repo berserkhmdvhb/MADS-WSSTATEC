@@ -1,6 +1,6 @@
 {
   "R": {
-    "Version": "4.2.2",
+    "Version": "4.1.2",
     "Repositories": [
       {
         "Name": "CRAN",
@@ -1888,19 +1888,6 @@
         "quadprog",
         "quantmod",
         "zoo"
-      ]
-    },
-    "tufte": {
-      "Package": "tufte",
-      "Version": "0.12",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "c291ba0e4194e339f7d04cd6b013f223",
-      "Requirements": [
-        "htmltools",
-        "knitr",
-        "rmarkdown",
-        "xfun"
       ]
     },
     "tzdb": {
