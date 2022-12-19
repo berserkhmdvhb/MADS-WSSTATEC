@@ -1543,6 +1543,16 @@
         "xml2"
       ]
     },
+    "sandwich": {
+      "Package": "sandwich",
+      "Version": "3.0-2",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "dd5af939b8690baa8ee0bca996e99924",
+      "Requirements": [
+        "zoo"
+      ]
+    },
     "sass": {
       "Package": "sass",
       "Version": "0.4.2",
@@ -1669,6 +1679,17 @@
         "glue",
         "magrittr",
         "stringi"
+      ]
+    },
+    "strucchange": {
+      "Package": "strucchange",
+      "Version": "1.5-3",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "aa3491f18768e967e782cca982c5f55b",
+      "Requirements": [
+        "sandwich",
+        "zoo"
       ]
     },
     "survival": {
@@ -1925,6 +1946,20 @@
       "Repository": "CRAN",
       "Hash": "f1cb46c157d080b729159d407be83496",
       "Requirements": []
+    },
+    "vars": {
+      "Package": "vars",
+      "Version": "1.5-6",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "745d54055d1748f9c9895017149ad82c",
+      "Requirements": [
+        "MASS",
+        "lmtest",
+        "sandwich",
+        "strucchange",
+        "urca"
+      ]
     },
     "vctrs": {
       "Package": "vctrs",
