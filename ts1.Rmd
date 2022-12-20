@@ -58,7 +58,7 @@ library(shades) #edit colors in natural ways:
 library(urca) 
 library(tseries)
 library(vars) # for VAR models
-
+library(dynlm)
 ```
 
 ```{r}
@@ -154,7 +154,7 @@ head(df_train)
 tail(df_train)
 
 ```
-
+Let us how the plot looks after removing the outlier:
 
 ```{r}
 p <- df_train |>
@@ -178,6 +178,36 @@ date_range <- seq(min(df_train$date), max(df_train$date), by = 1)
 date_range[!date_range %in% df_train$date] 
 
 ```
+# **Prepare Test Set** {#testprepare}
+
+```{r}
+summary(df_train)
+```
+
+```{r}
+df_test |> describe()
+```
+
+```{r}
+xts_test_meantemp <- xts(df_test$meantemp, order.by=df_test$date, "%Y-%m-%d")
+```
+```{r}
+head(xts_test_meantemp)
+```
+```{r}
+tail(xts_test_meantemp)
+```
+
+```{r}
+ts_plot(xts_test_meantemp)
+```
+```{r}
+xts_week_test_meantemp <- apply.weekly(xts_test_meantemp,sum)
+ts_week_test_meantemp <-ts_ts(xts_week_test_meantemp)
+```
+
+
+
 # **Time Series Analysis**
 ## **Construct Time Series** {#initts}
 
@@ -193,10 +223,10 @@ max(df_train$date)
 ```{r}
 #ts_train <- zoo(df_train$meantemp, df_train$date)
 
-xts_train <- xts(df_train$meantemp, order.by=df_train$date, "%Y-%m-%d")
-class(xts_train)
-head(xts_train)
-tail(xts_train)
+xts_train_meantemp <- xts(df_train$meantemp, order.by=df_train$date, "%Y-%m-%d")
+class(xts_train_meantemp)
+head(xts_train_meantemp)
+tail(xts_train_meantemp)
 
 # convert xts to ts
 
@@ -211,9 +241,19 @@ tail(xts_train)
 
 #ts_train <- ts(df_train$meantemp, start = decimal_date(ymd("2013-01-01")), frequency = 365.25 / 7)
 
-ts_train <-ts_ts(xts_train)
-head(ts_train)
-tail(ts_train)
+
+```
+
+Convert XTS objects to TS objects:
+```{r}
+ts_train_meantemp <-ts_ts(xts_train_meantemp)
+head(ts_train_meantemp)
+tail(ts_train_meantemp)
+```
+
+I plot a static plot as well:
+```{r}
+ts_plot(xts_train_meantemp)
 ```
 ## **Seasonality** {#seas}
 
@@ -225,23 +265,23 @@ Before that, I aggregate data weekly, monthly, and quarterly.
 ### **Seasonality Plots** {#seasplots}
 ```{r}
 # Weekly mean temperature
-xts_week_train <- apply.weekly(xts_train,sum)
-ts_week_train <-ts_ts(xts_week_train)
+xts_week_train_meantemp <- apply.weekly(xts_train_meantemp,sum)
+ts_week_train_meantemp <-ts_ts(xts_week_train_meantemp)
 
 # Monthly mean temperature
-xts_mon_train <- aggregate(xts_train, by=as.yearmon, FUN=sum)
-ts_mon_train <-ts_ts(xts_mon_train)
+xts_mon_train_meantemp <- aggregate(xts_train_meantemp, by=as.yearmon, FUN=sum)
+ts_mon_train_meantemp <-ts_ts(xts_mon_train_meantemp)
 
 # Quarterly mean temperature
-xts_quar_train <- aggregate(xts_train, as.yearqtr, FUN=sum)
-ts_quar_train <-ts_ts(xts_quar_train)
+xts_quar_train_meantemp <- aggregate(xts_train_meantemp, as.yearqtr, FUN=sum)
+ts_quar_train_meantemp <-ts_ts(xts_quar_train_meantemp)
 
 
 # Yearly mean temperate
 as.year <- function(x) as.integer(as.yearmon(x))
-xts_year_train <- aggregate(xts_train, by=as.year, FUN=sum)
-#ts_year_train <-ts_ts(xts_year_train)
-#xts_year_train[1]
+xts_year_train_meantemp <- aggregate(xts_train_meantemp, by=as.year, FUN=sum)
+#ts_year_train_meantemp <-ts_ts(xts_year_train_meantemp)
+#xts_year_train_meantemp[1]
 
 ```
 
@@ -250,13 +290,13 @@ The year 2017 has only one observation, so I remove it from all the aggregated d
 
 ```{r}
 
-xts_week_train <- head(xts_week_train, -1)
-xts_mon_train <- head(xts_mon_train, -1)
-xts_quar_train <- head(xts_quar_train, -1)
+xts_week_train_meantemp <- head(xts_week_train_meantemp, -1)
+xts_mon_train_meantemp <- head(xts_mon_train_meantemp, -1)
+xts_quar_train_meantemp <- head(xts_quar_train_meantemp, -1)
 
-ts_week_train <- head(ts_week_train, -1)
-ts_mon_train <- head(ts_mon_train, -1)
-ts_quar_train <- head(ts_quar_train, -1)
+ts_week_train_meantemp <- head(ts_week_train_meantemp, -1)
+ts_mon_train_meantemp <- head(ts_mon_train_meantemp, -1)
+ts_quar_train_meantemp <- head(ts_quar_train_meantemp, -1)
 
 
 ```
@@ -264,12 +304,12 @@ ts_quar_train <- head(ts_quar_train, -1)
 
 ```{r}
 #options(repr.plot.width = 7, repr.plot.height =20)
-forecast::ggseasonplot(ts_mon_train, year.labels=TRUE, year.labels.left=TRUE, labelgap = 0.1) +
+forecast::ggseasonplot(ts_mon_train_meantemp, year.labels=TRUE, year.labels.left=TRUE, labelgap = 0.1) +
   ylab("degree") +
   ggtitle("Seasonal plot: Monthly Mean Temperature")
 ```
 ```{r}
-forecast::ggseasonplot(ts_mon_train, year.labels=TRUE, year.labels.left=TRUE, labelgap = 0.1, polar=TRUE) +
+forecast::ggseasonplot(ts_mon_train_meantemp, year.labels=TRUE, year.labels.left=TRUE, labelgap = 0.1, polar=TRUE) +
   ylab("degree") +
   ggtitle("Polar Seasonal plot: Monthly Mean Temperature")
 ```
@@ -278,7 +318,7 @@ forecast::ggseasonplot(ts_mon_train, year.labels=TRUE, year.labels.left=TRUE, la
 
 ```{r}
 #options(repr.plot.width = 7, repr.plot.height =20)
-forecast::ggseasonplot(ts_quar_train, year.labels=TRUE, year.labels.left=TRUE, labelgap = 0.1) +
+forecast::ggseasonplot(ts_quar_train_meantemp, year.labels=TRUE, year.labels.left=TRUE, labelgap = 0.1) +
   ylab("degree") +
   ggtitle("Seasonal plot: Quarterly Mean Temperature")
 ```
@@ -290,7 +330,7 @@ forecast::ggseasonplot(ts_quar_train, year.labels=TRUE, year.labels.left=TRUE, l
 
 
 ```{r}
-forecast::ggseasonplot(ts_quar_train, year.labels=TRUE, year.labels.left=TRUE, labelgap = 0.1, polar=TRUE) +
+forecast::ggseasonplot(ts_quar_train_meantemp, year.labels=TRUE, year.labels.left=TRUE, labelgap = 0.1, polar=TRUE) +
   ylab("degree") +
   ggtitle("Polar Seasonal plot: Quarterly Mean Temperature")
 ```
@@ -299,13 +339,13 @@ forecast::ggseasonplot(ts_quar_train, year.labels=TRUE, year.labels.left=TRUE, l
 If I need to remove different periods of seasonality together, I would need to use the ```forecast:msts``` function.
 For instance in below I remove weekly and yearly seasonality together.
 ```{r}
-des_ts_train <- msts(xts_train,seasonal.periods = c(7,365))
+des_ts_train_meantemp <- msts(xts_train_meantemp,seasonal.periods = c(7,365))
 #head(des_xts_train)
 #library(tsbox)
 #ts_train <-ts_ts(xts_train)
 #ts_train
 
-class(des_ts_train)
+class(des_ts_train_meantemp)
 
 ```
 However, since its output had an unfamiliar and weird shape to me, and also since I wasn't sure it uses the state-of-the-art X13 decomposition, I incorporated the [X-13ARIMA-SEATS](http://www.seasonal.website/seasonal.html) using ```seasonal:seas``` function.
@@ -317,8 +357,8 @@ However, I am concerned that I would lose significant pattern and information wi
 `r colorize("Q3. If you could kindly share your viewpoint here, it would be very helpful for me to ensure how to proceed.", "red")`
 
 ```{r}
-length(xts_train)
-length(ts_train)
+length(xts_train_meantemp)
+length(ts_train_meantemp)
 
 
 ```
@@ -327,52 +367,52 @@ length(ts_train)
 
 ```{r}
 
-length(xts_train)
-nowXTS <-ts_xts(ts_train)
+length(xts_train_meantemp)
+nowXTS <-ts_xts(ts_train_meantemp)
 length(nowXTS)
 
-length(ts_week_train)
+length(ts_week_train_meantemp)
 ```
 ```{r}
-plot(ts_week_train)
-length(ts_week_train)
-
-```
-
-```{r}
-plot(ts_train)
-length(ts_train)
+plot(ts_week_train_meantemp)
+length(ts_week_train_meantemp)
 
 ```
 
-
 ```{r}
-plot(ts_mon_train)
-length(ts_mon_train)
+plot(ts_train_meantemp)
+length(ts_train_meantemp)
+
 ```
 
 
 ```{r}
-m <- seas(ts_mon_train)
-ts_train_adj <- final(m)
+plot(ts_mon_train_meantemp)
+length(ts_mon_train_meantemp)
+```
+
+
+```{r}
+m <- seas(ts_mon_train_meantemp)
+ts_train_adj_meantemp <- final(m)
 #ts_train_adj
-length(ts_train_adj)
+length(ts_train_adj_meantemp)
 ```
 
 
 
 
 ```{r}
-m <- seas(ts_mon_train)
-ts_train_adj <- final(m)
+m <- seas(ts_mon_train_meantemp)
+ts_train_adj_meantemp <- final(m)
 #ts_train_adj
-length(ts_train_adj)
+length(ts_train_adj_meantemp)
 ```
 
 
 
 ```{r}
-plot(ts_train_adj)
+plot(ts_train_adj_meantemp)
 ```
 
 Plot original data along with trend and seasonally adjusted data
@@ -382,7 +422,7 @@ Plot original data along with trend and seasonally adjusted data
 #series(m, "forecast.forecasts")
 #out(m)
 #seasadj(m)
-autoplot(ts_mon_train, series="Original Data") +
+autoplot(ts_mon_train_meantemp, series="Original Data") +
 autolayer(trendcycle(m), series="Trend") +
 autolayer(seasadj(m), series="Seasonally Adjusted") +
 xlab("Year") + ylab("Mean Temperature") +
@@ -397,14 +437,14 @@ scale_colour_manual(values=c("gray","blue","red"),
 In the seasonally adjusted time series ```ts_train_adj```, I detected a trend, therefore I detrend it using differencing.
 
 ```{r}
-#ts_train_adj |> log() |> nsdiffs(alpha=0.01) -> ts_train_adj_det
-ts_train_adj |> log() |> diff() -> ts_train_adj_det
+#ts_train_adj_meantemp |> log() |> nsdiffs(alpha=0.01) -> ts_train_adj_det_meantemp
+ts_train_adj_meantemp |> log() |> diff() -> ts_train_adj_det_meantemp
 
 
 ```
 
 ```{r}
-plot(ts_train_adj_det)
+plot(ts_train_adj_det_meantemp)
 #plot(d)
 ```
 
@@ -415,21 +455,21 @@ plot(ts_train_adj_det)
 ## **Correlation Plots**
 1. Weekly aggregated of original time series
 ```{r}
-ggAcf(ts_week_train, lag=50)
-pacf (ts_week_train, lag=50, pl = TRUE)
+ggAcf(ts_week_train_meantemp, lag=50)
+pacf (ts_week_train_meantemp, lag=50, pl = TRUE)
 ```
 
 2. Seasonally Adjusted
 
 ```{r}
-ggAcf(ts_train_adj, lag=10)
-pacf (ts_train_adj, lag=10, pl = TRUE)
+ggAcf(ts_train_adj_meantemp, lag=10)
+pacf (ts_train_adj_meantemp, lag=10, pl = TRUE)
 ```
 
 3. Seasonally Adjusted and Detrended
 ```{r}
-ggAcf(ts_train_adj_det, lag=10)
-pacf (ts_train_adj_det, lag=10, pl = TRUE)
+ggAcf(ts_train_adj_det_meantemp, lag=10)
+pacf (ts_train_adj_det_meantemp, lag=10, pl = TRUE)
 ```
 
 
@@ -441,40 +481,40 @@ pacf (ts_train_adj_det, lag=10, pl = TRUE)
 
 1. Original Time Series and its weekly adjusted
 ```{r}
-ts_train |> adf.test()
+ts_train_meantemp |> adf.test()
 ```
 ```{r}
-ts_week_train |> adf.test()
+ts_week_train_meantemp |> adf.test()
 ```
 
 2. Seasonally Adjusted
 ```{r}
-ts_train_adj |> adf.test() 
+ts_train_adj_meantemp |> adf.test() 
 ```
 
 
 3. Seasonally Adjusted and Detrended
 ```{r}
-ts_train_adj_det |> adf.test() 
+ts_train_adj_det_meantemp |> adf.test() 
 ```
 
 ### **KPSS**
 1. Original Time Series and also its weekly aggregated 
 ```{r}
-ts_train |> ur.kpss() |> summary()
+ts_train_meantemp |> ur.kpss() |> summary()
 ```
 ```{r}
-ts_week_train |> ur.kpss() |> summary()
+ts_week_train_meantemp |> ur.kpss() |> summary()
 ```
 
 2. Seasonally Adjusted
 ```{r}
-ts_train_adj |> ur.kpss() |> summary()
+ts_train_adj_meantemp |> ur.kpss() |> summary()
 ```
 
 3. Seasonally Adjusted and Detrended
 ```{r}
-ts_train_adj_det |> ur.kpss() |> summary()
+ts_train_adj_det_meantemp |> ur.kpss() |> summary()
 ```
 
 # **Time Series Forecasting** {#forecast}
@@ -484,19 +524,22 @@ ts_train_adj_det |> ur.kpss() |> summary()
 1. Forecast original time series of meantemp but aggregated weekly, as the original data has very high frequency, which makes it unsuitable for ARMA.
 Only for this case, I set `seasonal=TRUE`, as in next cases I use data that I seasonally adjusted them already.
 Setting `seasonal=TRUE` makes the model more time-consuming. 
+
+
+
 ```{r}
 
 
-forecast_ts_week_train = auto.arima(ts_week_train,
+forecast_ts_week_train_meantemp = auto.arima(ts_week_train_meantemp,
                             trace = TRUE, 
                             seasonal=TRUE,
                             stepwise=FALSE,
                             approximation=FALSE)
-checkresiduals(forecast_ts_week_train)
+checkresiduals(forecast_ts_week_train_meantemp)
 ```
 
 ```{r}
-autoplot(forecast(forecast_ts_week_train))
+autoplot(forecast(forecast_ts_week_train_meantemp))
 ```
 
 
@@ -505,17 +548,17 @@ autoplot(forecast(forecast_ts_week_train))
 ```{r}
 
 
-forecast_ts_train_adj = auto.arima(ts_train_adj,
+forecast_ts_train_adj_meantemp = auto.arima(ts_train_adj_meantemp,
                             trace = TRUE, 
                             seasonal= FALSE,
                             stepwise=FALSE,
                             approximation=FALSE)
-checkresiduals(forecast_ts_train_adj)
+checkresiduals(forecast_ts_train_adj_meantemp)
 ```
 
 ```{r}
 #forecast_ts_train_adj + ts_train_adj
-autoplot(forecast(forecast_ts_train_adj ))
+autoplot(forecast(forecast_ts_train_adj_meantemp))
 ```
 
 
@@ -524,16 +567,16 @@ autoplot(forecast(forecast_ts_train_adj ))
 ```{r}
 
 
-forecast_ts_train_adj_det = auto.arima(ts_train_adj_det,
+forecast_ts_train_adj_det_meantemp = auto.arima(ts_train_adj_det_meantemp,
                             trace = TRUE, 
                             seasonal= FALSE,
                             stepwise=FALSE,
                             approximation=FALSE)
-checkresiduals(forecast_ts_train_adj_det)
+checkresiduals(forecast_ts_train_adj_det_meantemp)
 ```
 
 ```{r}
-autoplot(forecast(forecast_ts_train_adj_det))
+autoplot(forecast(forecast_ts_train_adj_det_meantemp))
 ```
 
 
@@ -583,8 +626,8 @@ fig
 ```
 
 ```{r}
-xts_train_meantemp <- xts(df_train$meantemp, order.by=df_train$date, "%Y-%m-%d")
-ts_train_meantemp <-ts_ts(xts_train_meantemp)
+#xts_train_meantemp <- xts(df_train$meantemp, order.by=df_train$date, "%Y-%m-%d")
+#ts_train_meantemp <-ts_ts(xts_train_meantemp)
 
 xts_train_windspeed <- xts(df_train$wind_speed, order.by=df_train$date, "%Y-%m-%d")
 ts_train_windspeed <-ts_ts(xts_train_windspeed)
@@ -593,11 +636,26 @@ VAR_data <- ts.union(ts_train_meantemp, ts_train_windspeed)
 
 ```
 
+Let us plot static plots for them individually as well:
+
+```{r}
+ts_plot(xts_train_meantemp)
+```
+
+```{r}
+ts_plot(xts_train_windspeed)
+```
+
 Now that we have merged the column `meantemp` with `wind_speed`, we use VAR models:
 
 ```{r}
-VAR_est <- VAR(y = VAR_data)
+VAR_est <- VAR(y = VAR_data, season=4, type="both")
 VAR_est
+
+```
+
+```{r}
+summary(VAR_est)
 
 ```
 
@@ -612,5 +670,15 @@ summary(VAR_est$varresult$ts_train_windspeed)$adj.r.squared
 
 ```{r}
 forecasts <- predict(VAR_est)
+plot(forecasts)
 ```
+
+```{r}
+#VAR_EQ1 <- dynlm(ts_train_meantemp ~ #L(ts_train_meantemp, 1:2) + L(ts_train_windspeed, 1:2), #
+#                 start = c(2013-01-01), end = c(2012, #4))
+
+#VAR_EQ2 <- dynlm(ts_train_windspeed ~ #L(ts_train_meantemp, 1:2) + L(ts_train_windspeed, 1:2),
+#                 start = #decimal_date(ymd("2013-01-01")), end = start = #decimal_date(ymd("2017-01-01")))
+```
+
 
