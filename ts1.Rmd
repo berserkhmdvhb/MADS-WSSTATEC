@@ -586,9 +586,13 @@ autoplot(forecast(forecast_ts_train_adj_det_meantemp))
 
 
 ## **VAR**
+Now we model a multivariate time series by using both the columns `meantemp` and `wind_speed`.
 
+We plot wind_speed time series first:
+
+
+We use an interactive plot.
 ```{r}
-ts_plot(ts(df_train$wind_speed))
 p2 <- df_train |>
   ggplot( aes(x=date, y=wind_speed)) +
     geom_area(fill="#69b3a2", alpha=0.5) +
@@ -601,6 +605,39 @@ p2 <- ggplotly(p2)
 #p
 p2
 ```
+
+Now we use a static plot.
+
+
+```{r}
+#xts_train_meantemp <- xts(df_train$meantemp, order.by=df_train$date, "%Y-%m-%d")
+#ts_train_meantemp <-ts_ts(xts_train_meantemp)
+
+xts_train_windspeed <- xts(df_train$wind_speed, order.by=df_train$date, "%Y-%m-%d")
+ts_train_windspeed <-ts_ts(xts_train_windspeed)
+
+# Weekly mean temperature
+xts_week_train_windspeed <- apply.weekly(xts_train_windspeed,sum)
+ts_week_train_windspeed <-ts_ts(xts_week_train_windspeed)
+```
+
+```{r}
+ts_plot(ts_train_windspeed)
+```
+We must deal with anomalies first. 
+
+
+
+```{r}
+
+xts_train_windspeed <- tsclean(xts_train_windspeed)
+```
+
+
+```{r}
+ts_plot(xts_train_windspeed)
+```
+
 
 
 
@@ -626,20 +663,27 @@ fig
 ```
 
 ```{r}
-#xts_train_meantemp <- xts(df_train$meantemp, order.by=df_train$date, "%Y-%m-%d")
-#ts_train_meantemp <-ts_ts(xts_train_meantemp)
 
-xts_train_windspeed <- xts(df_train$wind_speed, order.by=df_train$date, "%Y-%m-%d")
-ts_train_windspeed <-ts_ts(xts_train_windspeed)
 VAR_data <- ts.union(ts_train_meantemp, ts_train_windspeed)
 #VAR_data <- window(ts.union(GDPGrowth, TSpread), start = c(1980, 3), end = c(2012, 4))
+v1 <- cbind(ts_week_train_meantemp, ts_week_train_windspeed)
+colnames(v1) <- cbind("meantemp","wind_speed")
+```
 
+```{r}
+#lagselect <- VARselect(v1, type = "both")
+#lagselect$selection
+```
+
+```{r}
+lagselect <- VARselect(VAR_data, type = "both")
+lagselect$selection
 ```
 
 Let us plot static plots for them individually as well:
 
 ```{r}
-ts_plot(xts_train_meantemp)
+ts_plot(ts_week_train_windspeed)
 ```
 
 ```{r}
@@ -647,6 +691,13 @@ ts_plot(xts_train_windspeed)
 ```
 
 Now that we have merged the column `meantemp` with `wind_speed`, we use VAR models:
+
+
+```{r}
+#VAR_est_weekly <- VAR(y = v1, p=1, type="both")
+#VAR_est_weekly
+
+```
 
 ```{r}
 VAR_est <- VAR(y = VAR_data, season=4, type="both")
