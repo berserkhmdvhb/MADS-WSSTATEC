@@ -534,7 +534,7 @@ Setting `seasonal=TRUE` makes the model more time-consuming.
 ```{r}
 
 
-forecast_ts_train_meantemp = auto.arima(xts_train_meantemp,
+forecast_ts_train_meantemp = auto.arima(ts_train_meantemp,
                             trace = TRUE, 
                             seasonal=TRUE,
                             stepwise=FALSE,
