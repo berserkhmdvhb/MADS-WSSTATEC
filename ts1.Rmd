@@ -181,7 +181,7 @@ date_range[!date_range %in% df_train$date]
 # **Prepare Test Set** {#testprepare}
 
 ```{r}
-summary(df_train)
+summary(df_test)
 ```
 
 ```{r}
@@ -191,9 +191,12 @@ df_test |> describe()
 ```{r}
 xts_test_meantemp <- xts(df_test$meantemp, order.by=df_test$date, "%Y-%m-%d")
 ```
+
+
 ```{r}
 head(xts_test_meantemp)
 ```
+
 ```{r}
 tail(xts_test_meantemp)
 ```
@@ -203,9 +206,12 @@ ts_plot(xts_test_meantemp)
 ```
 ```{r}
 xts_week_test_meantemp <- apply.weekly(xts_test_meantemp,sum)
-ts_week_test_meantemp <-ts_ts(xts_week_test_meantemp)
+ts_week_test_meantemp <- ts_ts(xts_week_test_meantemp)
 ```
 
+```{r}
+ts_plot(xts_week_test_meantemp)
+```
 
 
 # **Time Series Analysis**
@@ -521,8 +527,29 @@ ts_train_adj_det_meantemp |> ur.kpss() |> summary()
 
 ## **AUTO-ARIMA**
 
-1. Forecast original time series of meantemp but aggregated weekly, as the original data has very high frequency, which makes it unsuitable for ARMA.
-Only for this case, I set `seasonal=TRUE`, as in next cases I use data that I seasonally adjusted them already.
+
+1. Forecast original time series of meantemp, as the original data has very high frequency, which makes it unsuitable for ARMA.
+For this case, I set `seasonal=TRUE`, as in cases 3m I use data that I seasonally adjusted them already.
+Setting `seasonal=TRUE` makes the model more time-consuming. 
+```{r}
+
+
+forecast_ts_train_meantemp = auto.arima(ts_train_meantemp,
+                            trace = TRUE, 
+                            seasonal=TRUE,
+                            stepwise=FALSE,
+                            approximation=FALSE)
+checkresiduals(forecast_ts_train_meantemp)
+```
+
+```{r}
+autoplot(forecast(forecast_ts_train_meantemp)) + autolayer(ts_test_meantemp)
+```
+
+
+
+2. Forecast original time series of meantemp but aggregated weekly, as the original data has very high frequency, which makes it unsuitable for ARMA.
+For this case, I set `seasonal=TRUE`, as in case 3, I use data that I seasonally adjusted them already.
 Setting `seasonal=TRUE` makes the model more time-consuming. 
 
 
@@ -539,12 +566,13 @@ checkresiduals(forecast_ts_week_train_meantemp)
 ```
 
 ```{r}
-autoplot(forecast(forecast_ts_week_train_meantemp))
+autoplot(forecast(ts_week_train_meantemp)) + autolayer(ts_week_test_meantemp)
 ```
 
 
 
-2. Forecast deseasonalized time series:
+
+3. Forecast deseasonalized time series:
 ```{r}
 
 
@@ -563,7 +591,7 @@ autoplot(forecast(forecast_ts_train_adj_meantemp))
 
 
 
-3. Forecast deseasonalized and detrended time series:
+4. Forecast deseasonalized and detrended time series:
 ```{r}
 
 
@@ -621,6 +649,8 @@ ts_train_windspeed <-ts_ts(xts_train_windspeed)
 ```{r}
 ts_plot(ts_train_windspeed)
 ```
+
+
 We must deal with anomalies first. 
 
 
@@ -703,7 +733,7 @@ tail(v1)
 ```
 
 ```{r}
-VAR_est_weekly <- VAR(y = v1)
+VAR_est_weekly <- VAR(y = v1, season=4, type="both")
 VAR_est_weekly
 
 ```
@@ -753,4 +783,19 @@ plot(forecasts)
 #                 start = #decimal_date(ymd("2013-01-01")), end = start = #decimal_date(ymd("2017-01-01")))
 ```
 
+```{r}
+Granger_meantemp <- causality(VAR_est_weekly, cause = "meantemp")
+Granger_meantemp
+```
 
+```{r}
+Granger_windspeed <- causality(VAR_est_weekly, cause = "wind_speed")
+Granger_windspeed
+```
+
+
+```{r}
+FEVD1 <- fevd(VAR_est_weekly, n.ahead = 10)
+FEVD1
+plot(FEVD1)
+```
