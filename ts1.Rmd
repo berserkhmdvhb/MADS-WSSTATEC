@@ -534,7 +534,7 @@ Setting `seasonal=TRUE` makes the model more time-consuming.
 ```{r}
 
 
-forecast_ts_train_meantemp = auto.arima(ts_train_meantemp,
+forecast_ts_train_meantemp = auto.arima(xts_train_meantemp,
                             trace = TRUE, 
                             seasonal=TRUE,
                             stepwise=FALSE,
@@ -543,7 +543,7 @@ checkresiduals(forecast_ts_train_meantemp)
 ```
 
 ```{r}
-autoplot(forecast(forecast_ts_train_meantemp)) + autolayer(ts_test_meantemp)
+autoplot(forecast(forecast_ts_train_meantemp))# + autolayer(xts_test_meantemp)
 ```
 
 
@@ -566,7 +566,7 @@ checkresiduals(forecast_ts_week_train_meantemp)
 ```
 
 ```{r}
-autoplot(forecast(ts_week_train_meantemp)) + autolayer(ts_week_test_meantemp)
+autoplot(forecast(ts_week_train_meantemp)) #+ autolayer(ts_week_test_meantemp)
 ```
 
 
