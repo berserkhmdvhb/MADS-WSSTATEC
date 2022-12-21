@@ -616,9 +616,6 @@ Now we use a static plot.
 xts_train_windspeed <- xts(df_train$wind_speed, order.by=df_train$date, "%Y-%m-%d")
 ts_train_windspeed <-ts_ts(xts_train_windspeed)
 
-# Weekly mean temperature
-xts_week_train_windspeed <- apply.weekly(xts_train_windspeed,sum)
-ts_week_train_windspeed <-ts_ts(xts_week_train_windspeed)
 ```
 
 ```{r}
@@ -631,6 +628,7 @@ We must deal with anomalies first.
 ```{r}
 
 xts_train_windspeed <- tsclean(xts_train_windspeed)
+
 ```
 
 
@@ -639,7 +637,7 @@ ts_plot(xts_train_windspeed)
 ```
 
 
-
+In what follows, interactive plot of both time series are illustrated:
 
 ```{r}
 fig <- plot_ly(df_train, type = 'scatter', mode = 'lines')%>%
@@ -662,11 +660,18 @@ fig <- fig %>%
 fig
 ```
 
+We aggregate the windspeed time series by weekly
+```{r}
+# Weekly mean temperature
+xts_week_train_windspeed <- apply.weekly(xts_train_windspeed,sum)
+ts_week_train_windspeed <- ts_ts(xts_week_train_windspeed)
+```
+
 ```{r}
 
 VAR_data <- ts.union(ts_train_meantemp, ts_train_windspeed)
 #VAR_data <- window(ts.union(GDPGrowth, TSpread), start = c(1980, 3), end = c(2012, 4))
-v1 <- cbind(ts_week_train_meantemp, ts_week_train_windspeed)
+v1 <- cbind(xts_week_train_meantemp, xts_week_train_windspeed)
 colnames(v1) <- cbind("meantemp","wind_speed")
 ```
 
@@ -692,10 +697,14 @@ ts_plot(xts_train_windspeed)
 
 Now that we have merged the column `meantemp` with `wind_speed`, we use VAR models:
 
+```{r}
+v1 <- na.remove(v1)
+tail(v1)
+```
 
 ```{r}
-#VAR_est_weekly <- VAR(y = v1, p=1, type="both")
-#VAR_est_weekly
+VAR_est_weekly <- VAR(y = v1)
+VAR_est_weekly
 
 ```
 
@@ -711,6 +720,11 @@ summary(VAR_est)
 ```
 
 ```{r}
+summary(VAR_est_weekly)
+
+```
+
+```{r}
 summary(VAR_est$varresult$ts_train_meantemp)$adj.r.squared
 ```
 
@@ -718,9 +732,16 @@ summary(VAR_est$varresult$ts_train_meantemp)$adj.r.squared
 summary(VAR_est$varresult$ts_train_windspeed)$adj.r.squared
 ```
 
+```{r}
+summary(VAR_est_weekly$varresult$meantemp)$adj.r.squared
+```
 
 ```{r}
-forecasts <- predict(VAR_est)
+summary(VAR_est_weekly$varresult$wind_speed)$adj.r.squared
+```
+
+```{r}
+forecasts <- predict(VAR_est_weekly)
 plot(forecasts)
 ```
 
