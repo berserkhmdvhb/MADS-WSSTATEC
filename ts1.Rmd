@@ -787,20 +787,23 @@ summary(VAR_est)
 
 ```
 
-
-
 ```{r}
-summary(VAR_est$varresult$ts_train_meantemp)$adj.r.squared
-```
-
-```{r}
-summary(VAR_est$varresult$ts_train_windspeed)$adj.r.squared
+summary(VAR_est$varresult)
 ```
 
 
+```{r}
+summary(VAR_est$varresult$meantemp)$adj.r.squared
+```
 
 ```{r}
-forecasts <- predict(VAR_est)
+summary(VAR_est$varresult$wind_speed)$adj.r.squared
+```
+
+
+
+```{r}
+forecasts <- predict(VAR_est, h=114)
 plot(forecasts)
 ```
 
@@ -824,7 +827,7 @@ Granger_windspeed
 
 
 ```{r}
-FEVD1 <- fevd(VAR_est, n.ahead = 10)
+FEVD1 <- fevd(VAR_est, n.ahead = 50)
 FEVD1
 plot(FEVD1)
 ```
