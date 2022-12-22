@@ -61,6 +61,13 @@ library(vars) # for VAR models
 library(dynlm)
 ```
 
+```{r setup, include=FALSE}
+library(keras)
+library(tensorflow)
+install_keras()
+install_tensorflow(version = "nightly")
+```
+
 ```{r}
 
 colorize <- function(x, color) {
@@ -655,7 +662,7 @@ autoplot(forecast(forecast_ts_train_adj_det_meantemp))
 
 
 
-## **VAR**
+## **Vector autoregressive (VAR)**
 Now we model a multivariate time series by using both the columns `meantemp` and `wind_speed`.
 
 We plot wind_speed time series first:
@@ -831,3 +838,7 @@ FEVD1 <- fevd(VAR_est, n.ahead = 50)
 FEVD1
 plot(FEVD1)
 ```
+
+
+## **Neural Networks**
+
