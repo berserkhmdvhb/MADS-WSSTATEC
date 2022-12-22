@@ -205,6 +205,8 @@ tail(xts_test_meantemp)
 ts_plot(xts_test_meantemp)
 ```
 ```{r}
+
+ts_test_meantemp <- ts_ts(xts_test_meantemp)
 xts_week_test_meantemp <- apply.weekly(xts_test_meantemp,sum)
 ts_week_test_meantemp <- ts_ts(xts_week_test_meantemp)
 ```
@@ -531,21 +533,61 @@ ts_train_adj_det_meantemp |> ur.kpss() |> summary()
 1. Forecast original time series of meantemp, as the original data has very high frequency, which makes it unsuitable for ARMA.
 For this case, I set `seasonal=TRUE`, as in cases 3m I use data that I seasonally adjusted them already.
 Setting `seasonal=TRUE` makes the model more time-consuming. 
+
+
 ```{r}
 
 
-forecast_ts_train_meantemp = auto.arima(ts_train_meantemp,
+#forecast_ts_train_meantemp = auto.arima(ts_train_meantemp,
+#                            trace = TRUE, 
+#                            seasonal=TRUE,
+#                            stepwise=FALSE,
+#                            approximation=FALSE)
+#checkresiduals(forecast_ts_train_meantemp)
+```
+
+```{r}
+forecast_ts_train_meantemp <- auto.arima(ts_train_meantemp,
+                            d = 1,
+                            D = 1,
+                            start.p = 2,
+                            start.q = 3,
+                            max.p = 2,
+                            #max.d = 1,
+                            max.q = 3,
+                            start.P = 0,
+                            start.Q = 0,
+                            max.P = 0,
+                            #max.D = 1,
+                            max.Q = 0,
                             trace = TRUE, 
                             seasonal=TRUE,
-                            stepwise=FALSE,
-                            approximation=FALSE)
+                            stepwise=TRUE,
+                            approximation=FALSE,
+                            #nmodels=1
+                            )
 checkresiduals(forecast_ts_train_meantemp)
 ```
+
+
+
+model=sm.tsa.statespace.sarimax.SARIMAX(endog=train_df,order=(2,1,0),seasonal_order=(2,1,0,7),trend='c',enforce_invertibility=False)
+results=model.fit()
+print(results.summary())
+
 
 ```{r}
 autoplot(forecast(forecast_ts_train_meantemp))# + autolayer(xts_test_meantemp)
 ```
 
+```{r}
+length(ts_test_meantemp)
+```
+
+```{r}
+forecast_ts_train_meantemp |> forecast(h=114) |>
+autoplot() + autolayer(ts_test_meantemp)
+```
 
 
 2. Forecast original time series of meantemp but aggregated weekly, as the original data has very high frequency, which makes it unsuitable for ARMA.
@@ -557,16 +599,16 @@ Setting `seasonal=TRUE` makes the model more time-consuming.
 ```{r}
 
 
-forecast_ts_week_train_meantemp = auto.arima(ts_week_train_meantemp,
-                            trace = TRUE, 
-                            seasonal=TRUE,
-                            stepwise=FALSE,
-                            approximation=FALSE)
-checkresiduals(forecast_ts_week_train_meantemp)
+#forecast_ts_week_train_meantemp = auto.arima(ts_week_train_meantemp,
+#                            trace = TRUE, 
+#                            seasonal=TRUE,
+#                            stepwise=FALSE,
+#                            approximation=FALSE)
+#checkresiduals(forecast_ts_week_train_meantemp)
 ```
 
 ```{r}
-autoplot(forecast(ts_week_train_meantemp)) #+ autolayer(ts_week_test_meantemp)
+#autoplot(forecast(ts_week_train_meantemp)) #+ autolayer(ts_week_test_meantemp)
 ```
 
 
@@ -700,6 +742,7 @@ ts_week_train_windspeed <- ts_ts(xts_week_train_windspeed)
 ```{r}
 
 VAR_data <- ts.union(ts_train_meantemp, ts_train_windspeed)
+colnames(VAR_data) <- cbind("meantemp","wind_speed")
 #VAR_data <- window(ts.union(GDPGrowth, TSpread), start = c(1980, 3), end = c(2012, 4))
 v1 <- cbind(xts_week_train_meantemp, xts_week_train_windspeed)
 colnames(v1) <- cbind("meantemp","wind_speed")
@@ -732,11 +775,6 @@ v1 <- na.remove(v1)
 tail(v1)
 ```
 
-```{r}
-VAR_est_weekly <- VAR(y = v1, season=4, type="both")
-VAR_est_weekly
-
-```
 
 ```{r}
 VAR_est <- VAR(y = VAR_data, season=4, type="both")
@@ -749,10 +787,7 @@ summary(VAR_est)
 
 ```
 
-```{r}
-summary(VAR_est_weekly)
 
-```
 
 ```{r}
 summary(VAR_est$varresult$ts_train_meantemp)$adj.r.squared
@@ -762,16 +797,10 @@ summary(VAR_est$varresult$ts_train_meantemp)$adj.r.squared
 summary(VAR_est$varresult$ts_train_windspeed)$adj.r.squared
 ```
 
-```{r}
-summary(VAR_est_weekly$varresult$meantemp)$adj.r.squared
-```
+
 
 ```{r}
-summary(VAR_est_weekly$varresult$wind_speed)$adj.r.squared
-```
-
-```{r}
-forecasts <- predict(VAR_est_weekly)
+forecasts <- predict(VAR_est)
 plot(forecasts)
 ```
 
@@ -784,18 +813,18 @@ plot(forecasts)
 ```
 
 ```{r}
-Granger_meantemp <- causality(VAR_est_weekly, cause = "meantemp")
+Granger_meantemp <- causality(VAR_est, cause = "meantemp")
 Granger_meantemp
 ```
 
 ```{r}
-Granger_windspeed <- causality(VAR_est_weekly, cause = "wind_speed")
+Granger_windspeed <- causality(VAR_est, cause = "wind_speed")
 Granger_windspeed
 ```
 
 
 ```{r}
-FEVD1 <- fevd(VAR_est_weekly, n.ahead = 10)
+FEVD1 <- fevd(VAR_est, n.ahead = 10)
 FEVD1
 plot(FEVD1)
 ```
