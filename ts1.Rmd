@@ -883,6 +883,9 @@ fit_meantemp
 
 ```{r}
 nnetforecast <- forecast(fit_meantemp, h = 114, PI = T)  #Prediction intervals do not come by default in neural net forecasts, in constrast to ARIMA or exponential smoothing model
-autoplot(nnetforecast) + theme(plot.title = element_text(hjust = 0.5))#  + autolayer(ts_test_meantemp)
+#autoplot(nnetforecast) + theme(plot.title = element_text(hjust = 0.5))#  + autolayer(ts_test_meantemp)
+
+nnetforecast |> forecast(h=114, PI = T) |>
+autoplot() + autolayer(ts_test_meantemp)
 ```
 
