@@ -59,14 +59,13 @@ library(urca)
 library(tseries)
 library(vars) # for VAR models
 library(dynlm)
+#library(keras)
+#library(tensorflow)
+#install_keras()
+#install_tensorflow(version = "nightly")
 ```
 
-```{r setup, include=FALSE}
-library(keras)
-library(tensorflow)
-install_keras()
-install_tensorflow(version = "nightly")
-```
+  
 
 ```{r}
 
@@ -532,6 +531,13 @@ ts_train_adj_meantemp |> ur.kpss() |> summary()
 ts_train_adj_det_meantemp |> ur.kpss() |> summary()
 ```
 
+
+### **Dickey–Fuller**
+```{r}
+ts_train_meantemp |> ur.df() |> summary()
+```
+
+
 # **Time Series Forecasting** {#forecast}
 
 ## **AUTO-ARIMA**
@@ -570,18 +576,18 @@ forecast_ts_train_meantemp <- auto.arima(ts_train_meantemp,
                             trace = TRUE, 
                             seasonal=TRUE,
                             stepwise=TRUE,
-                            approximation=FALSE,
-                            #nmodels=1
+                            approximation=FALSE
+                            #nmodels=
                             )
 checkresiduals(forecast_ts_train_meantemp)
 ```
 
 
 
-model=sm.tsa.statespace.sarimax.SARIMAX(endog=train_df,order=(2,1,0),seasonal_order=(2,1,0,7),trend='c',enforce_invertibility=False)
-results=model.fit()
-print(results.summary())
-
+```{r}
+#checkresiduals(forecast_ts_train_meantemp)
+forecast_ts_train_meantemp
+```
 
 ```{r}
 autoplot(forecast(forecast_ts_train_meantemp))# + autolayer(xts_test_meantemp)
@@ -841,4 +847,42 @@ plot(FEVD1)
 
 
 ## **Neural Networks**
+
+
+```{r}
+set.seed(34)
+# nnetar() requires a numeric vector or time series object as
+# input ?nnetar() can be seen for more info on the function
+# nnetar() by default fits multiple neural net models and
+# gives averaged results xreg option allows for only numeric
+# vectors in nnetar() function
+fit_windspeed = nnetar(xts_train_windspeed)
+
+```
+
+```{r}
+fit_windspeed
+
+```
+
+```{r}
+nnetforecast <- forecast(fit_windspeed, h = 114, PI = F)  #Prediction intervals do not come by default in neural net forecasts, in constrast to ARIMA or exponential smoothing model
+autoplot(nnetforecast) + theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+
+fit_meantemp = nnetar(xts_train_meantemp)
+
+```
+
+```{r}
+fit_meantemp
+
+```
+
+```{r}
+nnetforecast <- forecast(fit_meantemp, h = 114, PI = F)  #Prediction intervals do not come by default in neural net forecasts, in constrast to ARIMA or exponential smoothing model
+autoplot(nnetforecast) + theme(plot.title = element_text(hjust = 0.5))
+```
 
