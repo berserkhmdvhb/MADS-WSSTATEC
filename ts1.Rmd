@@ -866,7 +866,7 @@ fit_windspeed
 ```
 
 ```{r}
-nnetforecast <- forecast(fit_windspeed, h = 114, PI = F)  #Prediction intervals do not come by default in neural net forecasts, in constrast to ARIMA or exponential smoothing model
+nnetforecast <- forecast(fit_windspeed, h = 114, PI = T)  #Prediction intervals do not come by default in neural net forecasts, in constrast to ARIMA or exponential smoothing model
 autoplot(nnetforecast) + theme(plot.title = element_text(hjust = 0.5))
 ```
 
@@ -882,7 +882,7 @@ fit_meantemp
 ```
 
 ```{r}
-nnetforecast <- forecast(fit_meantemp, h = 114, PI = F)  #Prediction intervals do not come by default in neural net forecasts, in constrast to ARIMA or exponential smoothing model
+nnetforecast <- forecast(fit_meantemp, h = 114, PI = T)  #Prediction intervals do not come by default in neural net forecasts, in constrast to ARIMA or exponential smoothing model
 autoplot(nnetforecast) + theme(plot.title = element_text(hjust = 0.5))
 ```
 
