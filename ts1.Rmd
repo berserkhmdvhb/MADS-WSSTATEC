@@ -725,6 +725,38 @@ ts_plot(xts_train_windspeed)
 ```
 
 
+Let us now do the same with test data of wind_speed column, as we need later for evaluation:
+
+
+```{r}
+xts_test_windspeed <- xts(df_test$wind_speed, order.by=df_test$date, "%Y-%m-%d")
+```
+
+
+```{r}
+head(xts_test_windspeed)
+```
+
+```{r}
+tail(xts_test_windspeed)
+```
+
+```{r}
+ts_plot(xts_test_windspeed)
+```
+We remove anomalies in the test data too:
+
+```{r}
+
+xts_test_windspeed <- tsclean(xts_test_windspeed)
+ts_test_windspeed <- ts_ts(xts_test_windspeed)
+
+```
+
+```{r}
+ts_plot(xts_test_windspeed)
+```
+
 In what follows, interactive plot of both time series are illustrated:
 
 ```{r}
@@ -870,7 +902,9 @@ fit_windspeed
 
 ```{r}
 nnetforecast <- forecast(fit_windspeed, h = 114, PI = T)  #Prediction intervals do not come by default in neural net forecasts, in constrast to ARIMA or exponential smoothing model
-autoplot(nnetforecast) + theme(plot.title = element_text(hjust = 0.5))
+
+nnetforecast |> forecast(h=114, PI = T) |>
+autoplot() + autolayer(ts_test_windspeed)
 ```
 
 ```{r}
