@@ -542,9 +542,24 @@ ts_train_adj_det_meantemp |> ur.kpss() |> summary()
 
 
 ### **Dickey–Fuller**
+1. Original Time Series and also its weekly aggregated 
 ```{r}
 ts_train_meantemp |> ur.df() |> summary()
 ```
+```{r}
+ts_week_train_meantemp |> ur.df() |> summary()
+```
+
+2. Seasonally Adjusted
+```{r}
+ts_train_adj_meantemp |> ur.df() |> summary()
+```
+
+3. Seasonally Adjusted and Detrended
+```{r}
+ts_train_adj_det_meantemp |> ur.df() |> summary()
+```
+
 
 
 
@@ -1029,6 +1044,7 @@ mae(predicted_windspeed, actual_winspeed)
 
 
 ```{r}
+rsq <- function (x, y) cor(x, y) ^ 2
 rsq(predicted_meantemp, actual_meantemp)
 ```
 
@@ -1040,29 +1056,12 @@ rsq(predicted_windspeed, actual_winspeed)
 
 
 ```{r}
-#ts_plot(ts_test_meantemp, forecast$mean)
-#ts.union(ts_test_meantemp, forecast$mean)
-#forecast$mean
-
-xts_temp <- xts(ts_test_meantemp, order.by=df_test$date, "%Y-%m-%d")
-xts_temp_2 <- xts(forecast[2]$forecast$meantemp$mean, order.by=df_test$date, "%Y-%m-%d")
-xts_temp
-xts_temp_2
-ts_plot(xts_temp, xts_temp_2)
+ts_plot(forecast[2]$forecast$meantemp$mean, ts_week_test_meantemp)
 ```
-
-
 ```{r}
-#ts_plot(ts_test_meantemp, forecast$mean)
-#ts.union(ts_test_meantemp, forecast$mean)
-#forecast$mean
-
-xts_temp <- xts(ts_test_windspeed, order.by=df_test$date, "%Y-%m-%d")
-xts_temp_2 <- xts(forecast[2]$forecast$wind_speed$mean, order.by=df_test$date, "%Y-%m-%d")
-xts_temp
-xts_temp_2
-ts_plot(xts_temp, xts_temp_2)
+ts_plot(forecast[2]$forecast$wind_speed$mean, ts_week_test_windspeed)
 ```
+
 
 
 
@@ -1094,12 +1093,13 @@ forecast[2]$forecast$wind_speed |>  autoplot() + autolayer(ts_week_test_windspee
 Granger_meantemp <- causality(VAR_est, cause = "meantemp")
 Granger_meantemp
 ```
-
+### **Granger Causality**
 ```{r}
 Granger_windspeed <- causality(VAR_est, cause = "wind_speed")
 Granger_windspeed
 ```
 
+### **Forecast Error Variance Decomposition (FEVD)**
 
 ```{r}
 FEVD1 <- fevd(VAR_est, n.ahead = 50)
@@ -1111,6 +1111,8 @@ plot(FEVD1)
 
 ## **Neural Networks**
 
+
+#### **wind_speed**
 
 ```{r}
 set.seed(34)
@@ -1130,60 +1132,56 @@ fit_windspeed
 
 
 ```{r}
-nnetforecast <- forecast(fit_windspeed, h = 114, PI = T)  #Prediction intervals do not come by default in neural net forecasts, in constrast to ARIMA or exponential smoothing model
-nnetforecast
+nnetforecast_windpseed <- forecast(fit_windspeed, h = 114, PI = T)  #Prediction intervals do not come by default in neural net forecasts, in constrast to ARIMA or exponential smoothing model
+nnetforecast_windspeed
 ```
 
 
 
 ```{r}
-forecast <- nnetforecast |> forecast(h=114, PI = T)
-forecast |> autoplot() + autolayer(ts_test_windspeed)
+forecast_windspeed <- nnetforecast_windspeed |> forecast(h=114, PI = T)
+forecast_windspeed 
 ```
 
+
+
+#### **meantemp**
 ```{r}
 
 fit_meantemp = nnetar(ts_train_meantemp)
-
-```
-
-```{r}
 fit_meantemp
 
 ```
 
-```{r}
-nnetforecast <- forecast(fit_meantemp, h = 114, PI = T)  #Prediction intervals do not come by default in neural net forecasts, in constrast to ARIMA or exponential smoothing model
-#autoplot(nnetforecast) + theme(plot.title = element_text(hjust = 0.5))#  + autolayer(ts_test_meantemp)
-
-nnetforecast |> forecast(h=114, PI = T) |>
-autoplot() + autolayer(ts_test_meantemp)
-```
-```{r}
-autoplot(ts_test_meantemp) 
-```
-
 
 
 
 ```{r}
 
-fit_union = nnetar(VAR_data)
 
+nnetforecast_meantemp <- forecast(fit_meantemp, h = 114, PI = T)
+nnetforecast_meantemp
 ```
 
 ```{r}
-fit_union
+forecast_meantemp <- nnetforecast_meantemp |> forecast(h=114, PI = T)
+forecast_meantemp
+```
 
+### **Evaluation**
+
+
+### **Forecast Plots**
+
+PLOT
+
+```{r}
+forecast_windspeed |> autoplot() + autolayer(ts_test_windspeed)
 ```
 
 ```{r}
-nnetforecast <- forecast(fit_union, h = 114, PI = T)  #Prediction intervals do not come by default in neural net forecasts, in constrast to ARIMA or exponential smoothing model
-#autoplot(nnetforecast) + theme(plot.title = element_text(hjust = 0.5))#  + autolayer(ts_test_meantemp)
+forecast_meantemp |> autoplot() + autolayer(ts_test_windspeed)
+```
 
-nnetforecast |> forecast(h=114, PI = T) |>
-autoplot() + autolayer(ts_test_meantemp)
-```
-```{r}
-autoplot(ts_test_meantemp) 
-```
+
+
