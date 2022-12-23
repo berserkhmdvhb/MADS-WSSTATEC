@@ -215,7 +215,12 @@ ts_plot(xts_test_meantemp)
 
 ts_test_meantemp <- ts_ts(xts_test_meantemp)
 xts_week_test_meantemp <- apply.weekly(xts_test_meantemp,sum)
-ts_week_test_meantemp <- ts_ts(xts_week_test_meantemp)
+ts_week_test_meantemp <- na.remove(ts_ts(xts_week_test_meantemp))
+#ts_week_test_meantemp <- as.ts(xts_week_test_meantemp)
+```
+
+```{r}
+length(ts_week_test_meantemp)
 ```
 
 ```{r}
@@ -542,6 +547,11 @@ ts_train_meantemp |> ur.df() |> summary()
 ```
 
 
+
+
+
+
+
 # **Time Series Forecasting** {#forecast}
 
 ## **AUTO-ARIMA**
@@ -864,15 +874,26 @@ fig
 We aggregate the windspeed time series by weekly
 ```{r}
 # Weekly mean temperature
-xts_week_train_windspeed <- apply.weekly(xts_train_windspeed,sum)
+xts_week_train_windspeed <- apply.weekly(xts_train_windspeed, sum)
 ts_week_train_windspeed <- ts_ts(xts_week_train_windspeed)
+
+xts_week_test_windspeed <- apply.weekly(xts_test_windspeed, sum)
+ts_week_test_windspeed <- na.remove(ts_ts(xts_week_test_windspeed))
+#ts_week_test_windspeed <- as.ts(xts_week_test_windspeed)
+
+
+```
+
+
+```{r}
+ts_week_test_meantemp
+
 ```
 
 ```{r}
-
-VAR_data <- ts.union(ts_train_meantemp, ts_train_windspeed)
+#VAR_data <- ts.union(ts_train_meantemp, ts_train_windspeed)
+VAR_data <- ts.union(ts_week_train_meantemp, ts_week_train_windspeed)
 colnames(VAR_data) <- cbind("meantemp","wind_speed")
-#VAR_data <- window(ts.union(GDPGrowth, TSpread), start = c(1980, 3), end = c(2012, 4))
 #v1 <- cbind(ts_week_train_meantemp, ts_week_train_windspeed)
 #colnames(v1) <- cbind("meantemp","wind_speed")
 ```
@@ -883,7 +904,12 @@ colnames(VAR_data) <- cbind("meantemp","wind_speed")
 ```
 
 ```{r}
-lagselect <- VARselect(VAR_data, type = "both")
+VAR_data <- na.remove(VAR_data)
+#tail(v1)
+```
+
+```{r}
+lagselect <- VARselect(VAR_data, season=12, type = "both")
 lagselect$selection
 ```
 
@@ -897,16 +923,13 @@ ts_plot(ts_week_train_windspeed)
 ts_plot(xts_train_windspeed)
 ```
 
+
 Now that we have merged the column `meantemp` with `wind_speed`, we use VAR models:
 
-```{r}
-#v1 <- na.remove(v1)
-#tail(v1)
-```
 
 
 ```{r}
-VAR_est <- VAR(y = VAR_data, season=4, type="both")
+VAR_est <- VAR(y = VAR_data, season=8, type="both", p=10)
 VAR_est
 
 ```
@@ -941,15 +964,24 @@ plot(forecasts)
 
 
 ```{r}
-forecast <- VAR_est |> forecast(h=114)
+forecast <- VAR_est |> forecast(h=18)
+```
+
+
+
+
+```{r}
+forecast[2]$forecast$meantemp
+ts_week_test_meantemp
 ```
 
 ```{r}
-forecast[2]$forecast$meantemp |>  autoplot() + autolayer(ts_test_meantemp)
+forecast[2]$forecast$meantemp |> autoplot() + autolayer(ts_week_test_meantemp)
+
 ```
 
 ```{r}
-forecast[2]$forecast$wind_speed |>  autoplot() + autolayer(ts_test_windspeed)
+forecast[2]$forecast$wind_speed |>  autoplot() + autolayer(ts_week_test_windspeed)
 ```
 
 ```{r}
