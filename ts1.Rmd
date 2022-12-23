@@ -587,10 +587,71 @@ checkresiduals(forecast_ts_train_meantemp)
 ```
 
 
+```{r}
+forecast_ts_train_meantemp
+```
+
+
+
+
+2. Forecast original time series of meantemp but aggregated weekly, as the original data has very high frequency, which makes it unsuitable for ARMA.
+For this case, I set `seasonal=TRUE`, as in case 3, I use data that I seasonally adjusted them already.
+Setting `seasonal=TRUE` makes the model more time-consuming. 
+
+
+
+```{r}
+#forecast_ts_week_train_meantemp = auto.arima(ts_week_train_meantemp,
+#                            trace = TRUE, 
+#                            seasonal=TRUE,
+#                            stepwise=FALSE,
+#                            approximation=FALSE)
+#checkresiduals(forecast_ts_week_train_meantemp)
+```
+
+
+
+```{r}
+#forecast_ts_week_train_meantemp
+```
+
+
+3. Forecast deseasonalized time series
+```{r}
+forecast_ts_train_adj_meantemp = auto.arima(ts_train_adj_meantemp,
+                            trace = TRUE, 
+                            seasonal= FALSE,
+                            stepwise=FALSE,
+                            approximation=FALSE)
+checkresiduals(forecast_ts_train_adj_meantemp)
+```
+
+```{r}
+forecast_ts_train_adj_meantemp
+```
+
+
+
+
+
+4. Forecast deseasonalized and detrended time series
+```{r}
+forecast_ts_train_adj_det_meantemp = auto.arima(ts_train_adj_det_meantemp,
+                            trace = TRUE, 
+                            seasonal= FALSE,
+                            stepwise=FALSE,
+                            approximation=FALSE)
+checkresiduals(forecast_ts_train_adj_det_meantemp)
+```
+
+
+
+
+
 
 ```{r}
 #checkresiduals(forecast_ts_train_meantemp)
-forecast_ts_train_meantemp
+forecast_ts_train_adj_det_meantemp
 ```
 
 ### **Evaluate**
@@ -631,9 +692,12 @@ rsq(actual, predicted)
 ```
 
 ### **Plot Forecast**
+1. Original time series of meantemp
+
 ```{r}
 autoplot(forecast(forecast_ts_train_meantemp))# + autolayer(xts_test_meantemp)
 ```
+
 
 ```{r}
 length(ts_test_meantemp)
@@ -645,41 +709,16 @@ autoplot() + autolayer(ts_test_meantemp)
 ```
 
 
-2. Forecast original time series of meantemp but aggregated weekly, as the original data has very high frequency, which makes it unsuitable for ARMA.
-For this case, I set `seasonal=TRUE`, as in case 3, I use data that I seasonally adjusted them already.
-Setting `seasonal=TRUE` makes the model more time-consuming. 
+2. Original time series of meantemp but aggregated weekly
 
-
-
-```{r}
-
-
-#forecast_ts_week_train_meantemp = auto.arima(ts_week_train_meantemp,
-#                            trace = TRUE, 
-#                            seasonal=TRUE,
-#                            stepwise=FALSE,
-#                            approximation=FALSE)
-#checkresiduals(forecast_ts_week_train_meantemp)
-```
 
 ```{r}
 #autoplot(forecast(ts_week_train_meantemp)) #+ autolayer(ts_week_test_meantemp)
 ```
 
 
+3. Deseasonalized time series
 
-
-3. Forecast deseasonalized time series:
-```{r}
-
-
-forecast_ts_train_adj_meantemp = auto.arima(ts_train_adj_meantemp,
-                            trace = TRUE, 
-                            seasonal= FALSE,
-                            stepwise=FALSE,
-                            approximation=FALSE)
-checkresiduals(forecast_ts_train_adj_meantemp)
-```
 
 ```{r}
 #forecast_ts_train_adj + ts_train_adj
@@ -687,22 +726,15 @@ autoplot(forecast(forecast_ts_train_adj_meantemp))
 ```
 
 
-
-4. Forecast deseasonalized and detrended time series:
-```{r}
-
-
-forecast_ts_train_adj_det_meantemp = auto.arima(ts_train_adj_det_meantemp,
-                            trace = TRUE, 
-                            seasonal= FALSE,
-                            stepwise=FALSE,
-                            approximation=FALSE)
-checkresiduals(forecast_ts_train_adj_det_meantemp)
-```
+4. Deseasonalized and detrended time series
 
 ```{r}
 autoplot(forecast(forecast_ts_train_adj_det_meantemp))
 ```
+
+
+Let us illustrate plot of forecasting the test data (using forecast from case 1) joint with test data.
+
 
 ```{r}
 #ts_plot(ts_test_meantemp, forecast$mean)
@@ -714,7 +746,6 @@ xts_temp_2 <- xts(forecast$mean, order.by=df_test$date, "%Y-%m-%d")
 xts_temp
 xts_temp_2
 ts_plot(xts_temp, xts_temp_2)
-
 ```
 
 `r colorize("Q4. I did all unit root tests and ARIMA models on all the following datasets: original time series, deseasonalized time series, and combination of deaseonalized and detrended time series. Judging by the plots, the adjusted versions performed poorly when fed to the model compared to feeding the weekly aggregated data that is fed to AUTOARIMA but with autmatic seasonality modelling of seasonality. Could you please share your viewpoint regarding this?", "red")`
