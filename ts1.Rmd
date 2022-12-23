@@ -691,7 +691,7 @@ rmse(predicted, actual)
 
 
 ```{r}
-mae(as.numeric(prediction),as.numeric(ts_test_meantemp))
+mae(predicted, actual)
 ```
 
 
@@ -816,7 +816,7 @@ ts_plot(xts_train_windspeed)
 ```
 
 
-Let us now do the same with test data of wind_speed column, as we need later for evaluation:
+Let us now do the same with test data of wind_speed column, as we need it later for evaluation:
 
 
 ```{r}
@@ -871,6 +871,8 @@ fig <- fig %>%
 fig
 ```
 
+
+
 We aggregate the windspeed time series by weekly
 ```{r}
 # Weekly mean temperature
@@ -890,6 +892,19 @@ ts_week_test_meantemp
 
 ```
 
+Let us plot static plots for them individually as well:
+
+```{r}
+ts_plot(ts_week_train_windspeed)
+```
+
+```{r}
+ts_plot(xts_train_windspeed)
+```
+
+
+
+Now we create a union of both time series and store it.
 ```{r}
 #VAR_data <- ts.union(ts_train_meantemp, ts_train_windspeed)
 VAR_data <- ts.union(ts_week_train_meantemp, ts_week_train_windspeed)
@@ -908,23 +923,19 @@ VAR_data <- na.remove(VAR_data)
 #tail(v1)
 ```
 
+
+We look at different lags suggested by different criteria if we use VAR model.
+
 ```{r}
 lagselect <- VARselect(VAR_data, season=12, type = "both")
 lagselect$selection
 ```
 
-Let us plot static plots for them individually as well:
-
 ```{r}
-ts_plot(ts_week_train_windspeed)
+lagselect$criteria
 ```
 
-```{r}
-ts_plot(xts_train_windspeed)
-```
-
-
-Now that we have merged the column `meantemp` with `wind_speed`, we use VAR models:
+Now that we have merged the column `meantemp` with `wind_speed`, we use VAR models with lag to be 10.
 
 
 
@@ -944,22 +955,33 @@ summary(VAR_est$varresult)
 ```
 
 
+### **Evaluate**
+
+Based on the model summary, we can look at the value of metrics obtained by the model when we use lag 10:
+
+```{r}
+lagselect$criteria[,10]
+```
+
+
+The $R^2$ score of the model after applying can also be reported for both of the time series used:
 ```{r}
 summary(VAR_est$varresult$meantemp)$adj.r.squared
 ```
-
 ```{r}
 summary(VAR_est$varresult$wind_speed)$adj.r.squared
 ```
 
- we test that the residuals are uncorrelated using a Portmanteau test.
+
+
+
+We test that the residuals are uncorrelated using a Portmanteau test.
 ```{r}
 serial.test(VAR_est, lags.pt=10, type="PT.asymptotic")
 ```
 
 ```{r}
 forecasts <- predict(VAR_est, h=114)
-plot(forecasts)
 ```
 
 
@@ -970,9 +992,85 @@ forecast <- VAR_est |> forecast(h=18)
 
 
 
+
+
+
+
+
+Now we use test data to evaluate predictions:
+
 ```{r}
-forecast[2]$forecast$meantemp
-ts_week_test_meantemp
+predicted_meantemp <- as.numeric(forecast[2]$forecast$meantemp$mean)
+actual_meantemp <- as.numeric(ts_week_test_meantemp)
+
+predicted_windspeed <- as.numeric(forecast[2]$forecast$wind_speed$mean)
+actual_winspeed <- as.numeric(ts_week_test_windspeed)
+```
+
+
+
+
+
+```{r}
+rmse(predicted_meantemp, actual_meantemp)
+```
+
+```{r}
+rmse(predicted_windspeed, actual_winspeed)
+```
+
+
+```{r}
+mae(predicted_meantemp, actual_meantemp)
+```
+```{r}
+mae(predicted_windspeed, actual_winspeed)
+```
+
+
+```{r}
+rsq(predicted_meantemp, actual_meantemp)
+```
+
+```{r}
+rsq(predicted_windspeed, actual_winspeed)
+```
+
+
+
+
+```{r}
+#ts_plot(ts_test_meantemp, forecast$mean)
+#ts.union(ts_test_meantemp, forecast$mean)
+#forecast$mean
+
+xts_temp <- xts(ts_test_meantemp, order.by=df_test$date, "%Y-%m-%d")
+xts_temp_2 <- xts(forecast[2]$forecast$meantemp$mean, order.by=df_test$date, "%Y-%m-%d")
+xts_temp
+xts_temp_2
+ts_plot(xts_temp, xts_temp_2)
+```
+
+
+```{r}
+#ts_plot(ts_test_meantemp, forecast$mean)
+#ts.union(ts_test_meantemp, forecast$mean)
+#forecast$mean
+
+xts_temp <- xts(ts_test_windspeed, order.by=df_test$date, "%Y-%m-%d")
+xts_temp_2 <- xts(forecast[2]$forecast$wind_speed$mean, order.by=df_test$date, "%Y-%m-%d")
+xts_temp
+xts_temp_2
+ts_plot(xts_temp, xts_temp_2)
+```
+
+
+
+
+### **Plot Forecast**
+
+```{r}
+plot(forecasts)
 ```
 
 ```{r}
@@ -1010,6 +1108,7 @@ plot(FEVD1)
 ```
 
 
+
 ## **Neural Networks**
 
 
@@ -1029,11 +1128,17 @@ fit_windspeed
 
 ```
 
+
 ```{r}
 nnetforecast <- forecast(fit_windspeed, h = 114, PI = T)  #Prediction intervals do not come by default in neural net forecasts, in constrast to ARIMA or exponential smoothing model
+nnetforecast
+```
 
-nnetforecast |> forecast(h=114, PI = T) |>
-autoplot() + autolayer(ts_test_windspeed)
+
+
+```{r}
+forecast <- nnetforecast |> forecast(h=114, PI = T)
+forecast |> autoplot() + autolayer(ts_test_windspeed)
 ```
 
 ```{r}
