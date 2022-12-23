@@ -59,6 +59,7 @@ library(urca)
 library(tseries)
 library(vars) # for VAR models
 library(dynlm)
+library(Metrics)
 #library(keras)
 #library(tensorflow)
 #install_keras()
@@ -592,6 +593,32 @@ checkresiduals(forecast_ts_train_meantemp)
 forecast_ts_train_meantemp
 ```
 
+### **Evaluate**
+
+Based on the results from the forecast, we have:
+AIC=4789.42   AICc=4789.5   BIC=4819.41
+
+Now I manually compute RMSE between prediction and test data
+```{r}
+forecast <- forecast_ts_train_meantemp |> forecast(h=114)
+forecast
+```
+
+
+```{r}
+prediction <- as.numeric(forecast$mean)
+actual <- as.numeric(ts_test_meantemp)
+rmse(as.numeric(prediction),as.numeric(ts_test_meantemp))
+```
+
+```{r}
+
+rmse(as.numeric(prediction),as.numeric(ts_test_meantemp))
+
+
+```
+
+### **Plot Forecast**
 ```{r}
 autoplot(forecast(forecast_ts_train_meantemp))# + autolayer(xts_test_meantemp)
 ```
