@@ -269,10 +269,12 @@ I plot a static plot as well:
 ```{r}
 ts_plot(xts_train_meantemp)
 ```
+
+
 ## **Seasonality** {#seas}
 
 
-From the initial plot I judge that there is yearly seasonality. 
+From the initial plot I judge that there is seasonali. 
 For more delicate observation to find if there is more granular periods of seasonality, I use seasonality plots.
 Before that, I aggregate data weekly, monthly, and quarterly.
 
@@ -348,6 +350,7 @@ forecast::ggseasonplot(ts_quar_train_meantemp, year.labels=TRUE, year.labels.lef
   ylab("degree") +
   ggtitle("Polar Seasonal plot: Quarterly Mean Temperature")
 ```
+
 ### **Deseasonalize** {#deseas}
 
 If I need to remove different periods of seasonality together, I would need to use the ```forecast:msts``` function.
@@ -757,8 +760,8 @@ ts_week_train_windspeed <- ts_ts(xts_week_train_windspeed)
 VAR_data <- ts.union(ts_train_meantemp, ts_train_windspeed)
 colnames(VAR_data) <- cbind("meantemp","wind_speed")
 #VAR_data <- window(ts.union(GDPGrowth, TSpread), start = c(1980, 3), end = c(2012, 4))
-v1 <- cbind(xts_week_train_meantemp, xts_week_train_windspeed)
-colnames(v1) <- cbind("meantemp","wind_speed")
+#v1 <- cbind(ts_week_train_meantemp, ts_week_train_windspeed)
+#colnames(v1) <- cbind("meantemp","wind_speed")
 ```
 
 ```{r}
@@ -784,8 +787,8 @@ ts_plot(xts_train_windspeed)
 Now that we have merged the column `meantemp` with `wind_speed`, we use VAR models:
 
 ```{r}
-v1 <- na.remove(v1)
-tail(v1)
+#v1 <- na.remove(v1)
+#tail(v1)
 ```
 
 
@@ -856,7 +859,7 @@ set.seed(34)
 # nnetar() by default fits multiple neural net models and
 # gives averaged results xreg option allows for only numeric
 # vectors in nnetar() function
-fit_windspeed = nnetar(xts_train_windspeed)
+fit_windspeed = nnetar(ts_train_windspeed)
 
 ```
 
@@ -872,7 +875,7 @@ autoplot(nnetforecast) + theme(plot.title = element_text(hjust = 0.5))
 
 ```{r}
 
-fit_meantemp = nnetar(xts_train_meantemp)
+fit_meantemp = nnetar(ts_train_meantemp)
 
 ```
 
@@ -888,4 +891,6 @@ nnetforecast <- forecast(fit_meantemp, h = 114, PI = T)  #Prediction intervals d
 nnetforecast |> forecast(h=114, PI = T) |>
 autoplot() + autolayer(ts_test_meantemp)
 ```
-
+```{r}
+autoplot(ts_test_meantemp) 
+```
