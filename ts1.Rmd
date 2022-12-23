@@ -598,7 +598,7 @@ forecast_ts_train_meantemp
 Based on the results from the forecast, we have:
 AIC=4789.42   AICc=4789.5   BIC=4819.41
 
-Now I manually compute RMSE between prediction and test data
+Now I manually compute the following evaluation metrics between prediction and test data: RMSE, MAE, $R^2$ score.
 ```{r}
 forecast <- forecast_ts_train_meantemp |> forecast(h=114)
 forecast
@@ -606,16 +606,28 @@ forecast
 
 
 ```{r}
-prediction <- as.numeric(forecast$mean)
+predicted <- as.numeric(forecast$mean)
 actual <- as.numeric(ts_test_meantemp)
-rmse(as.numeric(prediction),as.numeric(ts_test_meantemp))
+
 ```
 
+
+
+
 ```{r}
+rmse(predicted, actual)
+```
 
-rmse(as.numeric(prediction),as.numeric(ts_test_meantemp))
+
+```{r}
+mae(as.numeric(prediction),as.numeric(ts_test_meantemp))
+```
 
 
+```{r}
+rsq <- function (x, y) cor(x, y) ^ 2
+
+rsq(actual, predicted)
 ```
 
 ### **Plot Forecast**
@@ -692,7 +704,18 @@ checkresiduals(forecast_ts_train_adj_det_meantemp)
 autoplot(forecast(forecast_ts_train_adj_det_meantemp))
 ```
 
+```{r}
+#ts_plot(ts_test_meantemp, forecast$mean)
+#ts.union(ts_test_meantemp, forecast$mean)
+#forecast$mean
 
+xts_temp <- xts(ts_test_meantemp, order.by=df_test$date, "%Y-%m-%d")
+xts_temp_2 <- xts(forecast$mean, order.by=df_test$date, "%Y-%m-%d")
+xts_temp
+xts_temp_2
+ts_plot(xts_temp, xts_temp_2)
+
+```
 
 `r colorize("Q4. I did all unit root tests and ARIMA models on all the following datasets: original time series, deseasonalized time series, and combination of deaseonalized and detrended time series. Judging by the plots, the adjusted versions performed poorly when fed to the model compared to feeding the weekly aggregated data that is fed to AUTOARIMA but with autmatic seasonality modelling of seasonality. Could you please share your viewpoint regarding this?", "red")`
 
