@@ -848,11 +848,27 @@ summary(VAR_est$varresult$meantemp)$adj.r.squared
 summary(VAR_est$varresult$wind_speed)$adj.r.squared
 ```
 
-
+ we test that the residuals are uncorrelated using a Portmanteau test.
+```{r}
+serial.test(VAR_est, lags.pt=10, type="PT.asymptotic")
+```
 
 ```{r}
 forecasts <- predict(VAR_est, h=114)
 plot(forecasts)
+```
+
+
+```{r}
+forecast <- VAR_est |> forecast(h=114)
+```
+
+```{r}
+forecast[2]$forecast$meantemp |>  autoplot() + autolayer(ts_test_meantemp)
+```
+
+```{r}
+forecast[2]$forecast$wind_speed |>  autoplot() + autolayer(ts_test_windspeed)
 ```
 
 ```{r}
@@ -920,6 +936,31 @@ fit_meantemp
 
 ```{r}
 nnetforecast <- forecast(fit_meantemp, h = 114, PI = T)  #Prediction intervals do not come by default in neural net forecasts, in constrast to ARIMA or exponential smoothing model
+#autoplot(nnetforecast) + theme(plot.title = element_text(hjust = 0.5))#  + autolayer(ts_test_meantemp)
+
+nnetforecast |> forecast(h=114, PI = T) |>
+autoplot() + autolayer(ts_test_meantemp)
+```
+```{r}
+autoplot(ts_test_meantemp) 
+```
+
+
+
+
+```{r}
+
+fit_union = nnetar(VAR_data)
+
+```
+
+```{r}
+fit_union
+
+```
+
+```{r}
+nnetforecast <- forecast(fit_union, h = 114, PI = T)  #Prediction intervals do not come by default in neural net forecasts, in constrast to ARIMA or exponential smoothing model
 #autoplot(nnetforecast) + theme(plot.title = element_text(hjust = 0.5))#  + autolayer(ts_test_meantemp)
 
 nnetforecast |> forecast(h=114, PI = T) |>
