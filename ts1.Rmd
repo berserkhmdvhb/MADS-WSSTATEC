@@ -1360,7 +1360,7 @@ df_eval <- data.frame(metrics_list, ARMA_meantemp, VAR_meantemp, VAR_windspeed, 
 
 ```{r}
 #table(df_eval) |> htmlTable
-knitr::kable(df_eval, col.names = names(df_eval))
+#knitr::kable(df_eval, col.names = names(df_eval))
 #df_eval
 htmlTable(df_eval,
           cgroup = c("Metrics","ARMA","VAR","NN"),
