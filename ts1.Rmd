@@ -60,6 +60,7 @@ library(tseries)
 library(vars) # for VAR models
 library(dynlm)
 library(Metrics)
+library(htmlTable) # for showing tables
 #library(keras)
 #library(tensorflow)
 #install_keras()
@@ -569,7 +570,7 @@ ts_train_adj_det_meantemp |> ur.df() |> summary()
 
 # **Time Series Forecasting** {#forecast}
 
-## **AUTO-ARIMA**
+## **SARIMA**
 
 
 1. Forecast original time series of meantemp, as the original data has very high frequency, which makes it unsuitable for ARMA.
@@ -626,18 +627,18 @@ Setting `seasonal=TRUE` makes the model more time-consuming.
 
 
 ```{r}
-#forecast_ts_week_train_meantemp = auto.arima(ts_week_train_meantemp,
-#                            trace = TRUE, 
-#                            seasonal=TRUE,
-#                            stepwise=FALSE,
-#                            approximation=FALSE)
-#checkresiduals(forecast_ts_week_train_meantemp)
+forecast_ts_week_train_meantemp = auto.arima(ts_week_train_meantemp,
+                            trace = TRUE, 
+                            seasonal=TRUE,
+                            stepwise=FALSE,
+                            approximation=FALSE)
+checkresiduals(forecast_ts_week_train_meantemp)
 ```
 
 
 
 ```{r}
-#forecast_ts_week_train_meantemp
+forecast_ts_week_train_meantemp
 ```
 
 
@@ -681,13 +682,22 @@ forecast_ts_train_adj_det_meantemp
 
 ### **Evaluate**
 
-Based on the results from the forecast, we have:
-AIC=4789.42   AICc=4789.5   BIC=4819.41
+Based on the results from the forecast of original data (case 1), we have:
+
+```{r}
+AIC_ARMA <- AIC(forecast_ts_train_meantemp)
+AIC_ARMA
+```
+
+```{r}
+BIC_ARMA <- BIC(forecast_ts_train_meantemp)
+BIC_ARMA
+```
 
 Now I manually compute the following evaluation metrics between prediction and test data: RMSE, MAE, $R^2$ score.
 ```{r}
 forecast <- forecast_ts_train_meantemp |> forecast(h=114)
-forecast
+#forecast
 ```
 
 
@@ -701,19 +711,40 @@ actual <- as.numeric(ts_test_meantemp)
 
 
 ```{r}
-rmse(predicted, actual)
+RMSE_ARMA <- rmse(predicted, actual)
+RMSE_ARMA
 ```
 
 
 ```{r}
-mae(predicted, actual)
+MAE_ARMA <- mae(predicted, actual)
+MAE_ARMA
 ```
 
 
 ```{r}
 rsq <- function (x, y) cor(x, y) ^ 2
 
-rsq(actual, predicted)
+RSQ_ARMA <- rsq(actual, predicted)
+
+RSQ_ARMA
+```
+
+
+Two tables will be presented, one reports metrics of the model applied on training set, and the other reports metrics for evaluating predictions based on test set.
+
+```{r}
+
+d <- cbind(AIC = AIC_ARMA, BIC = BIC_ARMA)
+# at most 4 decimal places
+knitr::kable(d, digits = 4)
+```
+
+```{r}
+
+d <- cbind(R2 = RSQ_ARMA, RMSE = RMSE_ARMA, MAE = MAE_ARMA)
+# at most 4 decimal places
+knitr::kable(d, digits = 4)
 ```
 
 ### **Plot Forecast**
@@ -768,8 +799,8 @@ Let us illustrate plot of forecasting the test data (using forecast from case 1)
 
 xts_temp <- xts(ts_test_meantemp, order.by=df_test$date, "%Y-%m-%d")
 xts_temp_2 <- xts(forecast$mean, order.by=df_test$date, "%Y-%m-%d")
-xts_temp
-xts_temp_2
+#xts_temp
+#xts_temp_2
 ts_plot(xts_temp, xts_temp_2)
 ```
 
@@ -981,11 +1012,14 @@ lagselect$criteria[,10]
 
 The $R^2$ score of the model after applying can also be reported for both of the time series used:
 ```{r}
-summary(VAR_est$varresult$meantemp)$adj.r.squared
+VAR_meantemp_adjr <- summary(VAR_est$varresult$meantemp)$adj.r.squared
+VAR_meantemp_adjr
 ```
 ```{r}
-summary(VAR_est$varresult$wind_speed)$adj.r.squared
+VAR_windspeed_adjr <- summary(VAR_est$varresult$wind_speed)$adj.r.squared
+VAR_windspeed_adjr
 ```
+
 
 
 
@@ -1027,47 +1061,78 @@ actual_winspeed <- as.numeric(ts_week_test_windspeed)
 
 
 ```{r}
-rmse(predicted_meantemp, actual_meantemp)
+RMSE_meantemp_VAR <- rmse(predicted_meantemp, actual_meantemp)
+RMSE_meantemp_VAR
 ```
 
 ```{r}
-rmse(predicted_windspeed, actual_winspeed)
+RMSE_windspeed_VAR <- rmse(predicted_windspeed, actual_winspeed)
+RMSE_windspeed_VAR
 ```
 
 
 ```{r}
-mae(predicted_meantemp, actual_meantemp)
+MAE_meantemp_VAR <- mae(predicted_meantemp, actual_meantemp)
+MAE_meantemp_VAR
 ```
 ```{r}
-mae(predicted_windspeed, actual_winspeed)
+MAE_windspeed_VAR <- mae(predicted_windspeed, actual_winspeed)
+MAE_windspeed_VAR
 ```
 
 
 ```{r}
 rsq <- function (x, y) cor(x, y) ^ 2
-rsq(predicted_meantemp, actual_meantemp)
+RSQ_meantemp_VAR <- rsq(predicted_meantemp, actual_meantemp)
+RSQ_meantemp_VAR
 ```
 
 ```{r}
-rsq(predicted_windspeed, actual_winspeed)
+RSQ_windspeed_VAR <- rsq(predicted_windspeed, actual_winspeed)
+RSQ_windspeed_VAR
 ```
 
 
 
+
+
+#### meantemp
+```{r}
+
+d <- cbind(Adjusted_R2 = VAR_meantemp_adjr, AIC = lagselect$criteria[,10][0])
+# at most 4 decimal places
+knitr::kable(d, digits = 4)
+```
 
 ```{r}
-ts_plot(forecast[2]$forecast$meantemp$mean, ts_week_test_meantemp)
+
+d <- cbind(R2 = RSQ_meantemp_VAR, RMSE = RMSE_meantemp_VAR, MAE = MAE_meantemp_VAR)
+# at most 4 decimal places
+knitr::kable(d, digits = 4)
 ```
+
+
+
+
+#### windpseed
 ```{r}
-ts_plot(forecast[2]$forecast$wind_speed$mean, ts_week_test_windspeed)
+
+d <- cbind(Adjusted_R2 = VAR_meantemp_adjr, AIC = lagselect$criteria[,10][0])
+# at most 4 decimal places
+knitr::kable(d, digits = 4)
 ```
 
+```{r}
 
-
+d <- cbind(R2 = RSQ_windspeed_VAR, RMSE = RMSE_windspeed_VAR, MAE = MAE_windspeed_VAR)
+# at most 4 decimal places
+knitr::kable(d, digits = 4)
+```
 
 
 ### **Plot Forecast**
 
+First we plot forecasts based on the model being trained on the training data.
 ```{r}
 plot(forecasts)
 ```
@@ -1081,19 +1146,23 @@ forecast[2]$forecast$meantemp |> autoplot() + autolayer(ts_week_test_meantemp)
 forecast[2]$forecast$wind_speed |>  autoplot() + autolayer(ts_week_test_windspeed)
 ```
 
-```{r}
-#VAR_EQ1 <- dynlm(ts_train_meantemp ~ #L(ts_train_meantemp, 1:2) + L(ts_train_windspeed, 1:2), #
-#                 start = c(2013-01-01), end = c(2012, #4))
+Then, we plot the prediction of test data alongside the actual test data.
 
-#VAR_EQ2 <- dynlm(ts_train_windspeed ~ #L(ts_train_meantemp, 1:2) + L(ts_train_windspeed, 1:2),
-#                 start = #decimal_date(ymd("2013-01-01")), end = start = #decimal_date(ymd("2017-01-01")))
+```{r}
+ts_plot(forecast[2]$forecast$meantemp$mean, ts_week_test_meantemp)
 ```
 
+```{r}
+ts_plot(forecast[2]$forecast$wind_speed$mean, ts_week_test_windspeed)
+```
+
+
+### **Granger Causality**
 ```{r}
 Granger_meantemp <- causality(VAR_est, cause = "meantemp")
 Granger_meantemp
 ```
-### **Granger Causality**
+
 ```{r}
 Granger_windspeed <- causality(VAR_est, cause = "wind_speed")
 Granger_windspeed
@@ -1111,8 +1180,8 @@ plot(FEVD1)
 
 ## **Neural Networks**
 
-
-#### **wind_speed**
+### **Forecast**
+####  wind_speed
 
 ```{r}
 set.seed(34)
@@ -1132,14 +1201,14 @@ fit_windspeed
 
 ```{r}
 forecast_windspeed <- forecast(fit_windspeed, h = 114, PI = T)
-forecast_windspeed
+#forecast_windspeed
 ```
 
 
 
 
 
-#### **meantemp**
+#### meantemp
 ```{r}
 fit_meantemp = nnetar(ts_train_meantemp)
 fit_meantemp
@@ -1150,14 +1219,14 @@ fit_meantemp
 
 ```{r}
 forecast_meantemp <- forecast(fit_meantemp, h = 114, PI = T)
-forecast_meantemp
+#forecast_meantemp
 ```
 
 
 
-### **Evaluation**
+### **Evluate**
 
-#### **meantemp**
+#### meantemp
 
 ```{r}
 predicted <- as.numeric(forecast_meantemp$mean)
@@ -1167,24 +1236,27 @@ actual <- as.numeric(ts_test_meantemp)
 
 
 ```{r}
-rmse(predicted, actual)
+RMSE_meantemp_NN <- rmse(predicted, actual)
+RMSE_meantemp_NN
 ```
 
 
 ```{r}
-mae(predicted, actual)
+MAE_meantemp_NN <- mae(predicted, actual)
+MAE_meantemp_NN
 ```
 
 
 ```{r}
 rsq <- function (x, y) cor(x, y) ^ 2
 
-rsq(actual, predicted)
+RSQ_meantemp_NN <- rsq(actual, predicted)
+RSQ_meantemp_NN
 ```
 
 
 
-#### **wind_speed**
+#### wind_speed
 
 ```{r}
 predicted <- as.numeric(forecast_windspeed$mean)
@@ -1192,24 +1264,52 @@ actual <- as.numeric(ts_test_windspeed)
 ```
 
 ```{r}
-rmse(predicted, actual)
+RMSE_windspeed_NN <- rmse(predicted, actual)
+RMSE_windspeed_NN
 ```
 
 
 ```{r}
-mae(predicted, actual)
+MAE_windspeed_NN <- mae(predicted, actual)
+MAE_windspeed_NN
 ```
 
 
 ```{r}
-rsq(actual, predicted)
+RSQ_windspeed_NN <- rsq(actual, predicted)
+RSQ_windspeed_NN
+```
+
+
+Now present tables of report both of time series.
+#### meantemp
+
+
+```{r}
+
+d <- cbind(R2 = RSQ_meantemp_NN, RMSE = RMSE_meantemp_NN, MAE = MAE_meantemp_NN)
+# at most 4 decimal places
+knitr::kable(d, digits = 4)
+```
+
+
+
+
+#### windpseed
+
+
+```{r}
+d <- cbind(R2 = RSQ_windspeed_NN, RMSE = RMSE_windspeed_NN, MAE = MAE_windspeed_NN)
+# at most 4 decimal places
+knitr::kable(d, digits = 4)
 ```
 
 
 
 ### **Forecast Plots**
 
-PLOT
+First we plot forecasts based on the model being trained on the training data.
+
 
 ```{r}
 forecast_windspeed |> autoplot() + autolayer(ts_test_windspeed)
@@ -1221,3 +1321,50 @@ forecast_meantemp |> autoplot() + autolayer(ts_test_meantemp)
 
 
 
+Then, we plot the prediction of test data alongside the actual test data.
+
+```{r}
+xts_temp <- xts(ts_test_meantemp, order.by=df_test$date, "%Y-%m-%d")
+xts_temp_2 <- xts(forecast_meantemp$mean, order.by=df_test$date, "%Y-%m-%d")
+xts_temp
+
+ts_plot(xts_temp, xts_temp_2)
+```
+
+
+```{r}
+xts_temp <- xts(ts_test_windspeed, order.by=df_test$date, "%Y-%m-%d")
+xts_temp_2 <- xts(forecast_windspeed$mean, order.by=df_test$date, "%Y-%m-%d")
+xts_temp
+
+ts_plot(xts_temp, xts_temp_2)
+```
+
+
+### **Results**
+```{r}
+metrics_list <- c("RMSE", "MAE", "RSQ")
+ARMA_meantemp <- c(RMSE_ARMA, MAE_ARMA, RSQ_ARMA)
+
+VAR_meantemp <- c(RMSE_meantemp_VAR, MAE_meantemp_VAR, RSQ_meantemp_VAR)
+VAR_windspeed <- c(RMSE_windspeed_VAR, MAE_windspeed_VAR, RSQ_windspeed_VAR)
+
+NN_meantemp <- c(RMSE_meantemp_NN, MAE_meantemp_NN, RSQ_meantemp_NN)
+NN_windspeed <- c(RMSE_windspeed_NN, MAE_windspeed_NN, RSQ_windspeed_NN)
+
+
+df_eval <- data.frame(metrics_list, ARMA_meantemp, VAR_meantemp, VAR_windspeed, NN_meantemp, NN_windspeed)
+```
+
+
+
+```{r}
+#table(df_eval) |> htmlTable
+knitr::kable(df_eval, col.names = names(df_eval))
+#df_eval
+htmlTable(df_eval,
+          cgroup = c("Metrics","ARMA","VAR","NN"),
+          n.cgroup = c(1,1,2,2),
+          digits = 3
+)
+```
