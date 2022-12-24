@@ -1341,7 +1341,7 @@ ts_plot(xts_temp, xts_temp_2)
 ```
 
 
-### **Results**
+## **Results**
 ```{r}
 metrics_list <- c("RMSE", "MAE", "RSQ")
 ARMA_meantemp <- c(RMSE_ARMA, MAE_ARMA, RSQ_ARMA)
