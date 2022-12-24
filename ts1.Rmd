@@ -809,6 +809,7 @@ ts_plot(xts_temp, xts_temp_2)
 
 
 ## **Vector autoregressive (VAR)**
+
 Now we model a multivariate time series by using both the columns `meantemp` and `wind_speed`.
 
 We plot wind_speed time series first:
@@ -881,6 +882,8 @@ tail(xts_test_windspeed)
 ```{r}
 ts_plot(xts_test_windspeed)
 ```
+
+
 We remove anomalies in the test data too:
 
 ```{r}
@@ -947,8 +950,7 @@ ts_plot(ts_week_train_windspeed)
 ```{r}
 ts_plot(xts_train_windspeed)
 ```
-
-
+I tried the original data on VAR model, but I think due to many fluctuations and seasonality components, it didn't yield accurate results. I fed the weekly aggregated data instead, and I detected a significant imporve.
 
 Now we create a union of both time series and store it.
 ```{r}
@@ -1326,7 +1328,6 @@ Then, we plot the prediction of test data alongside the actual test data.
 ```{r}
 xts_temp <- xts(ts_test_meantemp, order.by=df_test$date, "%Y-%m-%d")
 xts_temp_2 <- xts(forecast_meantemp$mean, order.by=df_test$date, "%Y-%m-%d")
-xts_temp
 
 ts_plot(xts_temp, xts_temp_2)
 ```
@@ -1335,7 +1336,6 @@ ts_plot(xts_temp, xts_temp_2)
 ```{r}
 xts_temp <- xts(ts_test_windspeed, order.by=df_test$date, "%Y-%m-%d")
 xts_temp_2 <- xts(forecast_windspeed$mean, order.by=df_test$date, "%Y-%m-%d")
-xts_temp
 
 ts_plot(xts_temp, xts_temp_2)
 ```
@@ -1356,7 +1356,7 @@ NN_windspeed <- c(RMSE_windspeed_NN, MAE_windspeed_NN, RSQ_windspeed_NN)
 df_eval <- data.frame(metrics_list, ARMA_meantemp, VAR_meantemp, VAR_windspeed, NN_meantemp, NN_windspeed)
 ```
 
-
+Note that for the SARMA and Nueral Network models, the original data is used, while weekly aggregated data is used for VAR model.
 
 ```{r}
 #table(df_eval) |> htmlTable
