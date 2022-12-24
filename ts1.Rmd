@@ -1127,48 +1127,84 @@ fit_windspeed = nnetar(ts_train_windspeed)
 
 ```{r}
 fit_windspeed
-
 ```
 
 
 ```{r}
-nnetforecast_windpseed <- forecast(fit_windspeed, h = 114, PI = T)  #Prediction intervals do not come by default in neural net forecasts, in constrast to ARIMA or exponential smoothing model
-nnetforecast_windspeed
+forecast_windspeed <- forecast(fit_windspeed, h = 114, PI = T)
+forecast_windspeed
 ```
 
 
-
-```{r}
-forecast_windspeed <- nnetforecast_windspeed |> forecast(h=114, PI = T)
-forecast_windspeed 
-```
 
 
 
 #### **meantemp**
 ```{r}
-
 fit_meantemp = nnetar(ts_train_meantemp)
 fit_meantemp
-
 ```
 
 
 
 
 ```{r}
-
-
-nnetforecast_meantemp <- forecast(fit_meantemp, h = 114, PI = T)
-nnetforecast_meantemp
-```
-
-```{r}
-forecast_meantemp <- nnetforecast_meantemp |> forecast(h=114, PI = T)
+forecast_meantemp <- forecast(fit_meantemp, h = 114, PI = T)
 forecast_meantemp
 ```
 
+
+
 ### **Evaluation**
+
+#### **meantemp**
+
+```{r}
+predicted <- as.numeric(forecast_meantemp$mean)
+actual <- as.numeric(ts_test_meantemp)
+```
+
+
+
+```{r}
+rmse(predicted, actual)
+```
+
+
+```{r}
+mae(predicted, actual)
+```
+
+
+```{r}
+rsq <- function (x, y) cor(x, y) ^ 2
+
+rsq(actual, predicted)
+```
+
+
+
+#### **wind_speed**
+
+```{r}
+predicted <- as.numeric(forecast_windspeed$mean)
+actual <- as.numeric(ts_test_windspeed)
+```
+
+```{r}
+rmse(predicted, actual)
+```
+
+
+```{r}
+mae(predicted, actual)
+```
+
+
+```{r}
+rsq(actual, predicted)
+```
+
 
 
 ### **Forecast Plots**
@@ -1180,7 +1216,7 @@ forecast_windspeed |> autoplot() + autolayer(ts_test_windspeed)
 ```
 
 ```{r}
-forecast_meantemp |> autoplot() + autolayer(ts_test_windspeed)
+forecast_meantemp |> autoplot() + autolayer(ts_test_meantemp)
 ```
 
 
