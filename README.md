@@ -48,12 +48,13 @@ library(keras)
 install_keras(envname = "r-reticulate")
 ```
 
-5. Although by now the `r-reticulate` virtual environment contains the required python packages, yet the reticulate won't run Python from this environment and instead will load it 
+5. Although by now the `r-reticulate` virtual environment contains the required python packages, yet the reticulate won't run Python from this environment and instead will load it from its default path defined in the `RETICULATE_PYTHON`. The default path in Linux is `/usr/bin/python3`. To overcome this, we should unset the variable.
 
-install_keras(envname = "r-reticulate")
-
-library(reticulate)
+```r
 Sys.unsetenv("RETICULATE_PYTHON") 
 use_virtualenv("~/.virtualenvs/r-reticulate")
-library(keras)
+```
+
+6. Now if we load the `keras` library, the Python packages are loaded from the virtual evnironment.
+
 
