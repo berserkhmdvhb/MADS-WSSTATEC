@@ -15,8 +15,7 @@ output:
 # **Import Libraries**
 List of used packages:
 knitr dplyr ggplot2 broom reshape2 janitor plm pwt9 quarto renv shiny targets testthat tidyverse tibble usethis rio lubridate purrr Hmisc plotly hrbrthemes xts seasonal tsbox forecast tseries plotly ggridges shades urca
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup, echo=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(knitr) # for knitting markdown files
 library(dplyr)
@@ -65,9 +64,16 @@ library(htmlTable) # for showing tables
 #library(tensorflow)
 #install_keras()
 #install_tensorflow(version = "nightly")
+
+
 ```
 
-  
+```{r}
+library(reticulate)
+Sys.unsetenv("RETICULATE_PYTHON") 
+use_virtualenv("~/.virtualenvs/r-reticulate")
+library(keras)
+```
 
 ```{r}
 
@@ -104,11 +110,11 @@ The dataset used for this project is [Daily Delhi Climate](https://www.kaggle.co
 
 
 ## **Goal and Procedure**
-The goal of this project is to analyze and forecast the mean temperature Delhi, which is recorded in the meantemp column.
-For this, after importing the dataset, outliers are removed in [Preprocessing Section](#preprocess) section. Then meantemp column is assigned to a time series object in [Construct Time Series](#initts) section for further processing, analysis, and forecast.
-After detecting seasonalities using [plots](#seasplots), the time series is [seasonally adjusted](#deseas) using [X13-ARIMA-SEATS](https://cran.r-project.org/package=seasonal/vignettes/seas.pdf). Then, remaining trend is removed in [detrend](#detrend).
+The goal of this project is to analyze and forecast the mean temperature Delhi, which is recorded in the `meantemp` column. Three forecasting models, which are autoregressive–moving-average model (ARMA), Vector autoregression (VAR), and neural network (NN).
+After importing the dataset, outliers are removed in [Preprocessing Section](#preprocess) section. Then `meantemp` column is assigned to a time series object in [Construct Time Series](#initts) section for further processing.
+After detecting seasonalities using [plots](#seasplots), the time series is [seasonally adjusted](#deseas) using [X13-ARIMA-SEATS](https://cran.r-project.org/package=seasonal/vignettes/seas.pdf) decomposition model. Then, remaining trend is removed in [detrend](#detrend).
 
-Before forecasting the time series, I check for stationarity of time series, as stationarity is an assumption in ARIMA model.
+Before forecasting the time series, I check for staionarity of time series, as stationarity is an assumption in ARIMA model.
 For this purpose, unit root tests are applied in [Stationarity](#stationary) section.
 
 Finally, I used ARIMA model to forecast the time series in [Forecast Time Series](#forecast) section.
@@ -503,68 +509,73 @@ pacf (ts_train_adj_det_meantemp, lag=10, pl = TRUE)
 ## **Testing Stationarity: Unit Root Tests** {#stationary}
 ### **ADF**
 
-1. Original Time Series and its weekly adjusted
+In Augmented Dicky Fuller (ADF) test, the null hypothesis is $H_0:there is a unit root$, while the alternate hypothesis is $H_1: time series is stationary$. 
+DF test is valid if the time series is we well characterized by an $AR(1)$ model with noise errors.
+ADF test unlike DF test, can applied on a large sized set of time series models.
+
+
+1. Original Time Series and its Weekly Adjusted
 ```{r}
 ts_train_meantemp |> adf.test()
 ```
+
+
 ```{r}
 ts_week_train_meantemp |> adf.test()
 ```
 
 2. Seasonally Adjusted
+
 ```{r}
 ts_train_adj_meantemp |> adf.test() 
 ```
 
 
 3. Seasonally Adjusted and Detrended
+
 ```{r}
 ts_train_adj_det_meantemp |> adf.test() 
 ```
 
+In all the ADF tests done here, smaller test statistics indicates more likelihood of the null-hypothesis (time series is not stationary) be true. If we set threshold to be 0.05, the p-values less than this value imply null hypothesis is unlikely to be true, and we can increase our certainty in alternate hypothesis.
+For all the investigated datasets, results are reported in the following:
+
+1. Original time series: non-stationary
+2. Seasonally adjusted: non-stationary
+3. Seasonally adjusted and detrended: stationary
+4. Weekly aggregated time series: stationary
+
+
 ### **KPSS**
+
 1. Original Time Series and also its weekly aggregated 
+
 ```{r}
-ts_train_meantemp |> ur.kpss() |> summary()
+ts_train_meantemp |>  kpss.test()
 ```
 ```{r}
-ts_week_train_meantemp |> ur.kpss() |> summary()
+ts_week_train_meantemp |>  kpss.test()
 ```
 
 2. Seasonally Adjusted
+
 ```{r}
-ts_train_adj_meantemp |> ur.kpss() |> summary()
+ts_train_adj_meantemp |>  kpss.test()
 ```
 
 3. Seasonally Adjusted and Detrended
+
 ```{r}
-ts_train_adj_det_meantemp |> ur.kpss() |> summary()
+ts_train_adj_det_meantemp |> kpss.test()
 ```
 
 
-### **Dickey–Fuller**
-1. Original Time Series and also its weekly aggregated 
-```{r}
-ts_train_meantemp |> ur.df() |> summary()
-```
-```{r}
-ts_week_train_meantemp |> ur.df() |> summary()
-```
+For all the investigated datasets, results are reported in the following:
 
-2. Seasonally Adjusted
-```{r}
-ts_train_adj_meantemp |> ur.df() |> summary()
-```
-
-3. Seasonally Adjusted and Detrended
-```{r}
-ts_train_adj_det_meantemp |> ur.df() |> summary()
-```
-
-
-
-
-
+1. Original time series: non-stationary
+2. Seasonally adjusted: stationary
+3. Seasonally adjusted and detrended: non-stationary
+4. Weekly aggregated time series: non-stationary
 
 
 
@@ -695,6 +706,7 @@ BIC_ARMA
 ```
 
 Now I manually compute the following evaluation metrics between prediction and test data: RMSE, MAE, $R^2$ score.
+
 ```{r}
 forecast <- forecast_ts_train_meantemp |> forecast(h=114)
 #forecast
@@ -1180,7 +1192,7 @@ plot(FEVD1)
 
 
 
-## **Neural Networks**
+## **Feedforward Neural Network**
 
 ### **Forecast**
 ####  wind_speed
@@ -1341,7 +1353,232 @@ ts_plot(xts_temp, xts_temp_2)
 ```
 
 
-## **Results**
+## LSTM Neural Network
+
+
+
+
+```{r}
+
+get_scaling_factors <- function(data){
+  out <- c(mean = mean(data), sd = sd(data))
+  return(out)
+}
+
+normalize_data <- function(data, scaling_factors, reverse = FALSE) {
+  
+  if (reverse) temp <- (data * scaling_factors[2]) + scaling_factors[1]
+  else temp <- (data - scaling_factors[1]) / scaling_factors[2]
+  
+  out <- temp %>% as.matrix()
+  return(out)
+}
+
+
+kerasize_data <- function(data, x = TRUE, lag = 114, pred = 114) {
+  
+  if (x) {
+    
+    temp <- sapply(
+      1:(length(data) - lag - pred + 1)
+      ,function(x) data[x:(x + lag - 1), 1]
+    ) %>% t()
+    
+    out <- array(
+      temp %>% unlist() %>% as.numeric()
+      ,dim = c(nrow(temp), lag, 1)
+    )
+    
+  }  else {
+    
+    temp <- sapply(
+      (1 + lag):(length(data) - pred + 1)
+      ,function(x) data[x:(x + lag - 1), 1]
+    ) %>% t()
+    
+    out <- array(
+      temp %>% unlist() %>% as.numeric()
+      ,dim = c(nrow(temp), pred, 1)
+    )
+    
+  }
+  
+  return(out)
+  
+}
+
+kerasize_pred_input <- function(data, lag = 114, pred = 114){
+  temp <- data[(length(data) - pred + 1):length(data)]
+  temp <- normalize_data(temp, get_scaling_factors(data))
+  out <- array(temp, c(1, lag, 1))
+  return(out)
+}
+
+```
+
+```{r}
+lstm_build_model <- function(x, y, units = 128, batch = 1, epochs = 20, rate = 0.2, seed = 2137){
+  
+  lag = dim(x)[2]
+  
+  lstm_model <- keras_model_sequential()
+
+  lstm_model %>%
+    layer_lstm(units = 128
+               ,batch_input_shape = c(batch, lag, 1)
+               ,return_sequences = TRUE
+               ,stateful = TRUE) %>%
+    layer_dropout(rate = rate) %>%
+    layer_lstm(units = 64
+               ,return_sequences = TRUE
+               ,stateful = TRUE) %>%
+    layer_dropout(rate = rate) %>%
+    time_distributed(layer_dense(units = 1))
+
+  lstm_model %>%
+    compile(loss = 'mean_squared_error'
+            ,optimizer = 'adam'
+            ,metrics = 'accuracy')
+
+  tensorflow::set_random_seed(seed)
+  lstm_model %>% fit(
+    x = x
+    ,y = y
+    ,batch_size = batch
+    ,epochs = epochs
+    ,verbose = 0
+    ,shuffle = FALSE)
+  
+  out <- list(
+    model = lstm_model
+    ,x = x
+    ,batch = batch
+    ,lag = lag
+    ,pred = dim(y)[2]
+  )
+  return(out)
+
+}
+```
+
+```{r}
+lstm_forecast <- function(x_test, model, scaling_factors){
+  
+  batch <- model$batch
+  
+  temp <- model$model %>%
+    predict(x_test, batch_size = batch) %>% 
+    .[, , 1] %>%
+    normalize_data(scaling_factors = scaling_factors, reverse = TRUE)
+  
+  out <- list(
+    forecast = temp
+    ,scaling_factors = scaling_factors
+  )
+  
+  return(out)
+  
+}
+```
+
+
+
+
+
+```{r}
+# remove the first row of df_test, as it is common with df_train
+#df_test <- df_test[-1,] |> head(1)
+#data <- as.data.frame(rbind(df_train, df_test))
+#data <- merge(df_train, df_test, all=TRUE)
+
+data_meantemp <- ts(c(ts_train_meantemp, ts_test_meantemp), 
+           start = start(ts_train_meantemp), 
+           frequency = frequency(ts_test_meantemp))	
+scaling_factors <- get_scaling_factors(data_meantemp)
+data_meantemp_norm <- normalize_data(data_meantemp, scaling_factors)
+
+x_data <- kerasize_data(data_meantemp_norm, x = TRUE, lag = 114, pred = 114)
+y_data <- kerasize_data(data_meantemp_norm, x = FALSE, lag = 114, pred = 114)
+x_test <- kerasize_pred_input(data_meantemp_norm, lag = 114, pred = 114)
+
+```
+
+```{r}
+
+model <- lstm_build_model(x_data, y_data)
+```
+
+```{r}
+prediction <- lstm_forecast(x_test, model, scaling_factors)
+```
+
+
+
+
+
+
+
+
+
+```{r}
+# If whole data was predicted
+#temp <- as.data.frame(rbind(df_train,df_test))
+#xts_meantemp_pred <- xts(prediction$forecast, #order.by=temp$date, "%Y-%m-%d")
+#xts_all <- xts(temp$meantemp, order.by=temp$date, #"%Y-%m-%d")
+#ts_plot(xts_meantemp_pred, xts_all)
+xts_temp <- xts(ts_test_meantemp, 
+                order.by=df_test$date, 
+                "%Y-%m-%d")
+xts_temp_2 <- xts(prediction$forecast, 
+                  order.by=df_test$date, 
+                  "%Y-%m-%d")
+#xts_temp
+#xts_temp_2
+ts_plot(xts_temp, xts_temp_2)
+
+```
+
+```{r}
+predicted <- as.numeric(prediction$forecast)
+actual <- as.numeric(ts_test_meantemp)
+RMSE_meantemp_LSTM <- rmse(predicted, actual)
+MAE_meantemp_LSTM <- mae(predicted, actual)
+RSQ_meantemp_LSTM <- rsq(actual, predicted)
+```
+
+
+```{r}
+data_windspeed <- ts(c(ts_train_windspeed, ts_test_windspeed), 
+           start = start(ts_train_windspeed), 
+           frequency = frequency(ts_test_windspeed))	
+scaling_factors <- get_scaling_factors(data_windspeed)
+data_windspeed_norm <- normalize_data(data_windspeed, scaling_factors)
+
+x_data <- kerasize_data(data_windspeed_norm, x = TRUE, lag = 114, pred = 114)
+y_data <- kerasize_data(data_windspeed_norm, x = FALSE, lag = 114, pred = 114)
+x_test <- kerasize_pred_input(data_windspeed_norm, lag = 114, pred = 114)
+
+```
+
+```{r}
+
+model <- lstm_build_model(x_data, y_data)
+```
+
+```{r}
+prediction <- lstm_forecast(x_test, model, scaling_factors)
+```
+
+```{r}
+predicted <- as.numeric(prediction$forecast)
+actual <- as.numeric(ts_test_windspeed)
+RMSE_windspeed_LSTM <- rmse(predicted, actual)
+MAE_windspeed_LSTM <- mae(predicted, actual)
+RSQ_windspeed_LSTM <- rsq(actual, predicted)
+```
+
+
+## **Compare Metrics**
 ```{r}
 metrics_list <- c("RMSE", "MAE", "RSQ")
 ARMA_meantemp <- c(RMSE_ARMA, MAE_ARMA, RSQ_ARMA)
@@ -1352,8 +1589,15 @@ VAR_windspeed <- c(RMSE_windspeed_VAR, MAE_windspeed_VAR, RSQ_windspeed_VAR)
 NN_meantemp <- c(RMSE_meantemp_NN, MAE_meantemp_NN, RSQ_meantemp_NN)
 NN_windspeed <- c(RMSE_windspeed_NN, MAE_windspeed_NN, RSQ_windspeed_NN)
 
+LSTM_meantemp <- c(RMSE_meantemp_LSTM,
+                   MAE_meantemp_LSTM, 
+                   RSQ_meantemp_LSTM)
 
-df_eval <- data.frame(metrics_list, ARMA_meantemp, VAR_meantemp, VAR_windspeed, NN_meantemp, NN_windspeed)
+LSTM_windspeed <- c(RMSE_windspeed_LSTM,
+                   MAE_windspeed_LSTM, 
+                   RSQ_windspeed_LSTM)
+
+df_eval <- data.frame(metrics_list, ARMA_meantemp, VAR_meantemp, VAR_windspeed, NN_meantemp, NN_windspeed, LSTM_meantemp, LSTM_windspeed)
 ```
 
 Note that for the SARMA and Nueral Network models, the original data is used, while weekly aggregated data is used for VAR model.
@@ -1363,8 +1607,8 @@ Note that for the SARMA and Nueral Network models, the original data is used, wh
 #knitr::kable(df_eval, col.names = names(df_eval))
 #df_eval
 htmlTable(df_eval,
-          cgroup = c("Metrics","ARMA","VAR","NN"),
-          n.cgroup = c(1,1,2,2),
+          cgroup = c("Metrics","ARMA","VAR","NN", "LSTM"),
+          n.cgroup = c(1,1,2,2,2),
           digits = 3
 )
 ```
