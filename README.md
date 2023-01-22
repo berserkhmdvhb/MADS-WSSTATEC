@@ -3,6 +3,11 @@ This repository is dedicated to the project of time series forecast, done in R l
 The dataset used for the project is the [Delhi daily climate data](https://www.kaggle.com/datasets/sumanthvrao/daily-climate-time-series-data).
 Three modesl are used for forecasting, which are autoregressive–moving-average (ARMA), vector autoregression (VAR), and two neural network models, feedforward and long-short-term-memory.
 
+
+
+
+# Usage
+
 To view this project, you can look at the [HTML rendering of the Rmardkown file](https://htmlpreview.github.io/?https://raw.githubusercontent.com/berserkhmdvhb/WSSTATEC/main/ts1.html).
 However, since the project includes interactive plots, which are not presentable by clicking on the link, I suggest to clone the repository and then open the HTML file, with following command:
 
@@ -11,10 +16,14 @@ git clone git@github.com:berserkhmdvhb/WSSTATEC.git
 ```
 
 
+## Libraries
+The libraries required for this project is provided in the `renv.lock` file. Either use renv when creating a project, or if you haven't, install the [`renv`](https://rstudio.github.io/renv/articles/renv.html) library, load it, and then use the [`renv.lock`](https://github.com/berserkhmdvhb/WSSTATEC/blob/main/renv.lock) file (by copying it to project's directory) to install the requied packages. Please follow the following commands in the console:
 
-# Usage
-
-The libraries required for this project is provided in the `renv.lock` file.
+```r
+install.packages("renv")
+library(renv)
+renv::restore()
+```
 
 ##  Interoperability between Python and R 
 For the LSTM model, as R doesn't have native `tensorflow` and `keras` libraries, a python virtual environment is connected to this project so as to use the LSTM model. To connect Rstudio to the virtual environment and incorporate required python libraries in the project, the manner partly explained in website of [Tensorflow for R](https://tensorflow.rstudio.com/install/) is followed. Some steps are missing website, so a comprehensive guideline is provided in the following:
