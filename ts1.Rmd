@@ -13,9 +13,8 @@ output:
     toc: yes
 ---
 # **Import Libraries**
-List of used packages:
-knitr dplyr ggplot2 broom reshape2 janitor plm pwt9 quarto renv shiny targets testthat tidyverse tibble usethis rio lubridate purrr Hmisc plotly hrbrthemes xts seasonal tsbox forecast tseries plotly ggridges shades urca
-```{r setup, echo=FALSE}
+
+```{r setup, warning=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(knitr) # for knitting markdown files
 library(dplyr)
@@ -76,7 +75,6 @@ library(keras)
 ```
 
 ```{r}
-
 colorize <- function(x, color) {
   if (knitr::is_latex_output()) {
     sprintf("\\textcolor{%s}{%s}", color, x)
@@ -96,6 +94,7 @@ colorize <- function(x, color) {
 ## **Describe Dataset**
 
 The dataset used for this project is [Daily Delhi Climate](https://www.kaggle.com/datasets/sumanthvrao/daily-climate-time-series-data), which consists of the following columns:
+
 1. `date`: Date of format YYYY-MM-DD starting from "2013-01-01" and ending in "2017-01-01".
 <br/>
 2. `meantemp`: Mean temperature averaged out from multiple 3 hour intervals in a day.
@@ -106,12 +105,14 @@ The dataset used for this project is [Daily Delhi Climate](https://www.kaggle.co
 <br/>
 5. `mean_pressure`: Pressure reading of weather (measure in atm)
 
-`r colorize("Q1. How can I find out if analyzing meantemp indvidiually (univariate) suffices, or if including other columns and perform a multivariate analysis would worth the effort to find more meaninful patterns and forecasts?", "red")`
-
 
 ## **Goal and Procedure**
-The goal of this project is to analyze and forecast the mean temperature Delhi, which is recorded in the `meantemp` column. Three forecasting models, which are autoregressive–moving-average model (ARMA), Vector autoregression (VAR), and neural network (NN).
-After importing the dataset, outliers are removed in [Preprocessing Section](#preprocess) section. Then `meantemp` column is assigned to a time series object in [Construct Time Series](#initts) section for further processing.
+
+The goal of this project is to analyze and forecast the mean temperature of Delhi, which is recorded in the `meantemp` column. For some models, the wind speed of Delhi is also predicted.
+
+The following four forecasting models are used for this work:
+autoregressive–moving-average model (ARMA), vector autoregression (VAR), feedforward neural network (NN), and long-short term memory (LSTM) neural network.
+After importing the dataset, outliers are removed in [Preprocessing and Analysis Section](#preprocess) section. Then `meantemp` column is assigned to a time series object in [Construct Time Series](#initts) section for further processing.
 After detecting seasonalities using [plots](#seasplots), the time series is [seasonally adjusted](#deseas) using [X13-ARIMA-SEATS](https://cran.r-project.org/package=seasonal/vignettes/seas.pdf) decomposition model. Then, remaining trend is removed in [detrend](#detrend).
 
 Before forecasting the time series, I check for staionarity of time series, as stationarity is an assumption in ARIMA model.
@@ -129,11 +130,20 @@ df_test <- read_csv("data/DailyDelhiClimateTest.csv")
 summary(df_train)
 ```
 ```{r}
-df_train |> describe()
+df_train |> dplyr::glimpse()
+```
+```{r}
+df_test |> summary()
+```
+
+```{r}
+df_test |> dplyr::glimpse()
 ```
 
 # **Visualize Data** {#viz}
+
 Below we can see interactive plot of the time series.
+
 ```{r}
 p <- df_train |>
   ggplot( aes(x=date, y=meantemp)) +
@@ -150,9 +160,12 @@ p
 ```
 
 # **Preprocessing** {#preprocess}
-We can detect an outlier at the last observation (last row of dataframe). It causes an abrupt decrease in value of temperature. This would lead to problems in further analysis I will proceed and also when I later apply functions on the time series. Therefore, I replace the last observation's value with its previous one.
 
-`r colorize("Q2. Is imputing with the last observation the right approach here? Or is preferrable that I use median of last n (rows) for instance? Maybe it won't matter, as when I aggregate data (per week, month, week, etc.), I remove the last observation.", "red")`
+## **Treat Outliers: Manual** {#outlilermanual}
+
+Evidenced by the plot of time series, an outlier at the last observation (last row of dataframe) can be detected. It causes an abrupt decrease in value of temperature. This would lead to problems in further analysis and forecasting models. Therefore, last observation's value is replaced with its previous one. In [Treat Outliers: Automatic](#outlierauto), an automatic procedure of treating outliers is performed.
+
+
 ```{r}
 previous_value <- df_train$meantemp[df_train$date == as.Date('2016-12-31')]
 
@@ -168,7 +181,8 @@ head(df_train)
 tail(df_train)
 
 ```
-Let us how the plot looks after removing the outlier:
+
+The plot of data after removing the outlier is visualized below:
 
 ```{r}
 p <- df_train |>
@@ -186,60 +200,16 @@ p
 ```
 
 
-Find if there is any missing dates
+In below we find if there is any missing date
 ```{r}
 date_range <- seq(min(df_train$date), max(df_train$date), by = 1) 
 date_range[!date_range %in% df_train$date] 
 
 ```
-# **Prepare Test Set** {#testprepare}
-
-```{r}
-summary(df_test)
-```
-
-```{r}
-df_test |> describe()
-```
-
-```{r}
-xts_test_meantemp <- xts(df_test$meantemp, order.by=df_test$date, "%Y-%m-%d")
-```
-
-
-```{r}
-head(xts_test_meantemp)
-```
-
-```{r}
-tail(xts_test_meantemp)
-```
-
-```{r}
-ts_plot(xts_test_meantemp)
-```
-```{r}
-
-ts_test_meantemp <- ts_ts(xts_test_meantemp)
-xts_week_test_meantemp <- apply.weekly(xts_test_meantemp,sum)
-ts_week_test_meantemp <- na.remove(ts_ts(xts_week_test_meantemp))
-#ts_week_test_meantemp <- as.ts(xts_week_test_meantemp)
-```
-
-```{r}
-length(ts_week_test_meantemp)
-```
-
-```{r}
-ts_plot(xts_week_test_meantemp)
-```
-
-
-# **Time Series Analysis**
 ## **Construct Time Series** {#initts}
 
-Now we use the ```meantemp``` column to create our time series data.
-I assigned the time series to xts objects. But since many functions later require ts object, each time I define an xts, I also convert it to ts object using ```tsbox::ts_ts``` 
+Thee `meantemp` column is used to create time series data.
+The time series is assigned to `xts` objects. But since many functions later require `ts` object, each time a `xts` object is defined, a `ts` counterpart is created for further possible use. The conversion is performed using  `txbox::ts_ts` function.
 
 
 ```{r}
@@ -272,26 +242,49 @@ tail(xts_train_meantemp)
 ```
 
 Convert XTS objects to TS objects:
+
 ```{r}
-ts_train_meantemp <-ts_ts(xts_train_meantemp)
+ts_train_meantemp <- ts_ts(xts_train_meantemp)
 head(ts_train_meantemp)
 tail(ts_train_meantemp)
 ```
 
-I plot a static plot as well:
+Static plot is show in the following:
+
 ```{r}
 ts_plot(xts_train_meantemp)
 ```
 
 
+## **Treat Outliers: Automatic** {#outlilerauto}
+
+The [`tsclean`](https://www.rdocumentation.org/packages/forecast/versions/8.3/topics/tsclean) function  identifies and replace outliers and missing values in a time series. It uses Friedman's Super Smoother estimator for non-seasonal series and a robust STL decomposition for seasonal series. To estimate missing values and outlier replacements, linear interpolation is used on the (possibly seasonally adjusted) series. In our case, the robust STL decomposition is used due to existing of seasonalities.
+
+
+
+```{r}
+ts_plot(xts_train_meantemp)
+```
+
+```{r}
+xts_train_meantemp <- tsclean(xts_train_meantemp)
+```
+
+```{r}
+ts_plot(xts_train_meantemp)
+```
+
+I speculate that since there was not high fluctuations in the time series, there was no change.
+However, for instance in the `wind_speed` column, there are salient changes when using `tsclean`, as evident when applying in [VAR](#var).
+
 ## **Seasonality** {#seas}
 
-
-From the initial plot I judge that there is seasonali. 
+From the initial plot I judge that there is seasonality. 
 For more delicate observation to find if there is more granular periods of seasonality, I use seasonality plots.
 Before that, I aggregate data weekly, monthly, and quarterly.
 
 ### **Seasonality Plots** {#seasplots}
+
 ```{r}
 # Weekly mean temperature
 xts_week_train_meantemp <- apply.weekly(xts_train_meantemp,sum)
@@ -315,7 +308,7 @@ xts_year_train_meantemp <- aggregate(xts_train_meantemp, by=as.year, FUN=sum)
 ```
 
 
-The year 2017 has only one observation, so I remove it from all the aggregated datasets. I couldn't do it before aggregating, otherwise I would have confronted the error ```Error: series has no regular pattern```.
+The year 2017 has only one observation, so it is removed it from all the aggregated datasets. I couldn't do it before aggregating, otherwise I would have confronted the error `Error: series has no regular pattern`.
 
 ```{r}
 
@@ -344,7 +337,6 @@ forecast::ggseasonplot(ts_mon_train_meantemp, year.labels=TRUE, year.labels.left
 ```
 
 
-
 ```{r}
 #options(repr.plot.width = 7, repr.plot.height =20)
 forecast::ggseasonplot(ts_quar_train_meantemp, year.labels=TRUE, year.labels.left=TRUE, labelgap = 0.1) +
@@ -352,22 +344,20 @@ forecast::ggseasonplot(ts_quar_train_meantemp, year.labels=TRUE, year.labels.lef
   ggtitle("Seasonal plot: Quarterly Mean Temperature")
 ```
 
-
-
-
-
-
-
 ```{r}
 forecast::ggseasonplot(ts_quar_train_meantemp, year.labels=TRUE, year.labels.left=TRUE, labelgap = 0.1, polar=TRUE) +
   ylab("degree") +
   ggtitle("Polar Seasonal plot: Quarterly Mean Temperature")
 ```
 
+
+Judging from the plots, all months seem to have seasonalities, with stronger ones in second and third quarters of each year.
+
 ### **Deseasonalize** {#deseas}
 
-If I need to remove different periods of seasonality together, I would need to use the ```forecast:msts``` function.
-For instance in below I remove weekly and yearly seasonality together.
+If one intends to remove different periods of seasonality together, he can use the `forecast::msts` function.
+For instance in below, weekly and yearly seasonality are removed together.
+
 ```{r}
 des_ts_train_meantemp <- msts(xts_train_meantemp,seasonal.periods = c(7,365))
 #head(des_xts_train)
@@ -378,19 +368,13 @@ des_ts_train_meantemp <- msts(xts_train_meantemp,seasonal.periods = c(7,365))
 class(des_ts_train_meantemp)
 
 ```
-However, since its output had an unfamiliar and weird shape to me, and also since I wasn't sure it uses the state-of-the-art X13 decomposition, I incorporated the [X-13ARIMA-SEATS](http://www.seasonal.website/seasonal.html) using ```seasonal:seas``` function.
-However, it has some limitations, as stated in the package's [reference manua](https://www2.census.gov/software/x-13arima-seats/x-13-data/documentation/docx13as.pdf).
-For instance, the number of observations must not exceed 780. Nor should maximum seasonal period exceed 12.
-That is why I couldn't use original data ```ts_train``` and also the weekly aggregated data ```ts_week_train```, as I would confront the error ```Seasonal period too large```. The only possible aggregated data with highest frequency possible was monthly aggregated, ```ts_mon_train```.
+The output of `msts` had an a peculiar shape, and it is not using the state-of-the-art X13 decomposition. To address these limitations, I incorporated the [X-13ARIMA-SEATS](http://www.seasonal.website/seasonal.html) using `seasonal:seas` function. it has some of its own limitations, as stated in the package's [reference manua](https://www2.census.gov/software/x-13arima-seats/x-13-data/documentation/docx13as.pdf). For instance, the number of observations must not exceed 780, nor should maximum seasonal period exceed 12.
+That is why I couldn't use original data `ts_train` and also the weekly aggregated data `ts_week_train`, as I would confront the error `Seasonal period too large`. The only possible aggregated data with highest frequency possible was monthly aggregated, `ts_mon_train`.
 However, I am concerned that I would lose significant pattern and information with this amount of aggregation.
-
-`r colorize("Q3. If you could kindly share your viewpoint here, it would be very helpful for me to ensure how to proceed.", "red")`
 
 ```{r}
 length(xts_train_meantemp)
 length(ts_train_meantemp)
-
-
 ```
 
 
@@ -464,7 +448,8 @@ scale_colour_manual(values=c("gray","blue","red"),
 ```
 
 ## **Detrend** {#detrend}
-In the seasonally adjusted time series ```ts_train_adj```, I detected a trend, therefore I detrend it using differencing.
+
+In the seasonally adjusted time series `ts_train_adj`, a trend is salient. It can be removed by differencing as follows:
 
 ```{r}
 #ts_train_adj_meantemp |> log() |> nsdiffs(alpha=0.01) -> ts_train_adj_det_meantemp
@@ -483,7 +468,11 @@ plot(ts_train_adj_det_meantemp)
 
 
 ## **Correlation Plots**
+
+In the following the autocorrelation function (AC) and partial autocorrelation function (PACF) are visualized for both unadjusted and adjusted verions of time series.
+
 1. Weekly aggregated of original time series
+
 ```{r}
 ggAcf(ts_week_train_meantemp, lag=50)
 pacf (ts_week_train_meantemp, lag=50, pl = TRUE)
@@ -497,6 +486,7 @@ pacf (ts_train_adj_meantemp, lag=10, pl = TRUE)
 ```
 
 3. Seasonally Adjusted and Detrended
+
 ```{r}
 ggAcf(ts_train_adj_det_meantemp, lag=10)
 pacf (ts_train_adj_det_meantemp, lag=10, pl = TRUE)
@@ -504,17 +494,64 @@ pacf (ts_train_adj_det_meantemp, lag=10, pl = TRUE)
 
 
 
+## **Prepare Test Set** {#testprepare}
+
+In section [Preprocessing and Analysis Section](#preprocess), all the preprocessing steps are applied on the training dataset. In the following, same processes are applied on the test dataset.
+
+```{r}
+summary(df_test)
+```
+
+```{r}
+df_test |> describe()
+```
+
+```{r}
+xts_test_meantemp <- xts(df_test$meantemp, order.by=df_test$date, "%Y-%m-%d")
+```
 
 
-## **Testing Stationarity: Unit Root Tests** {#stationary}
-### **ADF**
+```{r}
+head(xts_test_meantemp)
+```
 
-In Augmented Dicky Fuller (ADF) test, the null hypothesis is $H_0:there is a unit root$, while the alternate hypothesis is $H_1: time series is stationary$. 
-DF test is valid if the time series is we well characterized by an $AR(1)$ model with noise errors.
-ADF test unlike DF test, can applied on a large sized set of time series models.
+```{r}
+tail(xts_test_meantemp)
+```
+
+```{r}
+ts_plot(xts_test_meantemp)
+```
+
+```{r}
+ts_test_meantemp <- ts_ts(xts_test_meantemp)
+xts_week_test_meantemp <- apply.weekly(xts_test_meantemp,sum)
+ts_week_test_meantemp <- na.remove(ts_ts(xts_week_test_meantemp))
+#ts_week_test_meantemp <- as.ts(xts_week_test_meantemp)
+```
+
+```{r}
+length(ts_week_test_meantemp)
+```
+
+```{r}
+ts_plot(xts_week_test_meantemp)
+```
+
+
+
+
+
+# **Testing Stationarity: Unit Root Tests** {#stationary}
+## ADF
+
+In Augmented Dicky Fuller (ADF) test, the null hypothesis is $H_0$: there is a unit root (equivalently, is a non-stationary time series), while the alternate hypothesis is $H_1$: time series is stationary.
+DF test is valid if the time series is well characterized by an $AR(1)$ model with noise errors.
+ADF test unlike DF test can be applied on a large sized set of time series models. For this reason, it was preferred in this work over DF test.
 
 
 1. Original Time Series and its Weekly Adjusted
+
 ```{r}
 ts_train_meantemp |> adf.test()
 ```
@@ -537,7 +574,7 @@ ts_train_adj_meantemp |> adf.test()
 ts_train_adj_det_meantemp |> adf.test() 
 ```
 
-In all the ADF tests done here, smaller test statistics indicates more likelihood of the null-hypothesis (time series is not stationary) be true. If we set threshold to be 0.05, the p-values less than this value imply null hypothesis is unlikely to be true, and we can increase our certainty in alternate hypothesis.
+In the ADF test, smaller test statistics indicates more likelihood of the null-hypothesis (time series is not stationary) be true. If we set threshold to be 0.05, the p-values less than this value imply null hypothesis is unlikely to be true, and we can increase our certainty in alternate hypothesis (time series is stationary).
 For all the investigated datasets, results are reported in the following:
 
 1. Original time series: non-stationary
@@ -546,7 +583,11 @@ For all the investigated datasets, results are reported in the following:
 4. Weekly aggregated time series: stationary
 
 
-### **KPSS**
+## KPSS
+
+In Kwiatkowski-Phillips-Schmidt-Shin (KPSS) test, the null hypothesis is $H_0$: time series is stationary (level or trend), while the alternate hypothesis is $H_1$: time series is non-stationary.
+
+
 
 1. Original Time Series and also its weekly aggregated 
 
@@ -579,13 +620,21 @@ For all the investigated datasets, results are reported in the following:
 
 
 
-# **Time Series Forecasting** {#forecast}
+# **Forecasting** {#forecast}
 
 ## **SARIMA**
 
+The seasonal autoregressive integrated moving average (SARIMA) is used in the following to forecast time series. The `auto.arima` function is used to find the following parameters, in which `(p, d, q)` correspond to non-seasonal component of time series, whereas `(P, D, Q)` correspond to seasonal component.
+
+- p: Auto-regressive lag order 
+- d: Order of first-differencing 
+- q: Moving average lag order
+- P: Auto-regressive lag order 
+- D: Order of seasonal-differencing
+- Q: Moving average lag order
 
 1. Forecast original time series of meantemp, as the original data has very high frequency, which makes it unsuitable for ARMA.
-For this case, I set `seasonal=TRUE`, as in cases 3m I use data that I seasonally adjusted them already.
+For this case, I set `seasonal=TRUE`, as in subsequent cases I use data that I seasonally adjusted them already.
 Setting `seasonal=TRUE` makes the model more time-consuming. 
 
 
@@ -628,9 +677,6 @@ checkresiduals(forecast_ts_train_meantemp)
 forecast_ts_train_meantemp
 ```
 
-
-
-
 2. Forecast original time series of meantemp but aggregated weekly, as the original data has very high frequency, which makes it unsuitable for ARMA.
 For this case, I set `seasonal=TRUE`, as in case 3, I use data that I seasonally adjusted them already.
 Setting `seasonal=TRUE` makes the model more time-consuming. 
@@ -672,6 +718,7 @@ forecast_ts_train_adj_meantemp
 
 
 4. Forecast deseasonalized and detrended time series
+
 ```{r}
 forecast_ts_train_adj_det_meantemp = auto.arima(ts_train_adj_det_meantemp,
                             trace = TRUE, 
@@ -705,7 +752,7 @@ BIC_ARMA <- BIC(forecast_ts_train_meantemp)
 BIC_ARMA
 ```
 
-Now I manually compute the following evaluation metrics between prediction and test data: RMSE, MAE, $R^2$ score.
+The following evaluation metrics between prediction and test data are manually computed: RMSE, MAE, $R^2$ score.
 
 ```{r}
 forecast <- forecast_ts_train_meantemp |> forecast(h=114)
@@ -743,7 +790,7 @@ RSQ_ARMA
 ```
 
 
-Two tables will be presented, one reports metrics of the model applied on training set, and the other reports metrics for evaluating predictions based on test set.
+Two tables will be presented, one of which reporting metrics of the model applied on training set, and the other reporting metrics for evaluating predictions based on test set.
 
 ```{r}
 
@@ -760,6 +807,7 @@ knitr::kable(d, digits = 4)
 ```
 
 ### **Plot Forecast**
+
 1. Original time series of meantemp
 
 ```{r}
@@ -801,7 +849,7 @@ autoplot(forecast(forecast_ts_train_adj_det_meantemp))
 ```
 
 
-Let us illustrate plot of forecasting the test data (using forecast from case 1) joint with test data.
+The plot of forecasting the test data (using forecast from case 1) joint with test data is displayed in the following:
 
 
 ```{r}
@@ -816,18 +864,16 @@ xts_temp_2 <- xts(forecast$mean, order.by=df_test$date, "%Y-%m-%d")
 ts_plot(xts_temp, xts_temp_2)
 ```
 
-`r colorize("Q4. I did all unit root tests and ARIMA models on all the following datasets: original time series, deseasonalized time series, and combination of deaseonalized and detrended time series. Judging by the plots, the adjusted versions performed poorly when fed to the model compared to feeding the weekly aggregated data that is fed to AUTOARIMA but with autmatic seasonality modelling of seasonality. Could you please share your viewpoint regarding this?", "red")`
 
 
+I confronted some issue adding the seasonality and trend componend of the adjusted versions to the original time series. Notwithstanding, judging by the results, the processed original data (without deseaosnalisation and without detrending) is a proper input to the ARMA model, as the function handles seasonalities by itself, and the results demonstrate a promising forecasting performance. Therefore, henceforth the processed time series but with no adjustment are used for the subsequent forecasting parts of this work.
 
-## **Vector autoregressive (VAR)**
+## **Vector autoregressive (VAR)** {#var}
 
-Now we model a multivariate time series by using both the columns `meantemp` and `wind_speed`.
+The vector autoregressiv the multivariate time series by using both the columns `meantemp` and `wind_speed`.
 
-We plot wind_speed time series first:
+The `wind_speed` is plotted interactively in the following:
 
-
-We use an interactive plot.
 ```{r}
 p2 <- df_train |>
   ggplot( aes(x=date, y=wind_speed)) +
@@ -842,8 +888,7 @@ p2 <- ggplotly(p2)
 p2
 ```
 
-Now we use a static plot.
-
+Same as [Construct Time Series](#initts), a time series object is constructed from the `wind_speed` column.
 
 ```{r}
 #xts_train_meantemp <- xts(df_train$meantemp, order.by=df_train$date, "%Y-%m-%d")
@@ -854,29 +899,28 @@ ts_train_windspeed <-ts_ts(xts_train_windspeed)
 
 ```
 
+A static plot of time series is provided below:
+
 ```{r}
 ts_plot(ts_train_windspeed)
 ```
 
 
-We must deal with anomalies first. 
-
-
+The outliers of time series are treated automatically, same as  [Treat Outliers: Automatic](#outlierauto).
 
 ```{r}
-
 xts_train_windspeed <- tsclean(xts_train_windspeed)
-
 ```
 
+
+The plot of the resulted time series is visualized below:
 
 ```{r}
 ts_plot(xts_train_windspeed)
 ```
 
 
-Let us now do the same with test data of wind_speed column, as we need it later for evaluation:
-
+The test data for `wind_speed` is created and processed using the same procedure followed for train data:
 
 ```{r}
 xts_test_windspeed <- xts(df_test$wind_speed, order.by=df_test$date, "%Y-%m-%d")
@@ -895,8 +939,6 @@ tail(xts_test_windspeed)
 ts_plot(xts_test_windspeed)
 ```
 
-
-We remove anomalies in the test data too:
 
 ```{r}
 
@@ -933,8 +975,8 @@ fig
 ```
 
 
+Weekly aggregated time series are also constructed:
 
-We aggregate the windspeed time series by weekly
 ```{r}
 # Weekly mean temperature
 xts_week_train_windspeed <- apply.weekly(xts_train_windspeed, sum)
@@ -953,7 +995,7 @@ ts_week_test_meantemp
 
 ```
 
-Let us plot static plots for them individually as well:
+Both original data and weekly aggregated one are visualized in the following:
 
 ```{r}
 ts_plot(ts_week_train_windspeed)
@@ -962,9 +1004,11 @@ ts_plot(ts_week_train_windspeed)
 ```{r}
 ts_plot(xts_train_windspeed)
 ```
-I tried the original data on VAR model, but I think due to many fluctuations and seasonality components, it didn't yield accurate results. I fed the weekly aggregated data instead, and I detected a significant imporve.
 
-Now we create a union of both time series and store it.
+Initially, the original time series is fed to the model, yet it yielded porr performance, which I speculate to be attributed to many fluctuations and seasonality components. On the other hand, using the weekly aggregated data leads to a significant imporve.
+
+Both time sreies are merged and then fed to the VAR model. NA values are also removed from the merged time series.
+
 ```{r}
 #VAR_data <- ts.union(ts_train_meantemp, ts_train_windspeed)
 VAR_data <- ts.union(ts_week_train_meantemp, ts_week_train_windspeed)
@@ -1017,7 +1061,7 @@ summary(VAR_est$varresult)
 
 ### **Evaluate**
 
-Based on the model summary, we can look at the value of metrics obtained by the model when we use lag 10:
+Based on the model summary, the value of metrics obtained by the model can be observed, for lag 10:
 
 ```{r}
 lagselect$criteria[,10]
@@ -1025,10 +1069,12 @@ lagselect$criteria[,10]
 
 
 The $R^2$ score of the model after applying can also be reported for both of the time series used:
+
 ```{r}
 VAR_meantemp_adjr <- summary(VAR_est$varresult$meantemp)$adj.r.squared
 VAR_meantemp_adjr
 ```
+
 ```{r}
 VAR_windspeed_adjr <- summary(VAR_est$varresult$wind_speed)$adj.r.squared
 VAR_windspeed_adjr
@@ -1037,8 +1083,9 @@ VAR_windspeed_adjr
 
 
 
+A Portmanteau test is provided to test that the residuals are uncorrelated. 
 
-We test that the residuals are uncorrelated using a Portmanteau test.
+
 ```{r}
 serial.test(VAR_est, lags.pt=10, type="PT.asymptotic")
 ```
@@ -1111,6 +1158,7 @@ RSQ_windspeed_VAR
 
 
 #### meantemp
+
 ```{r}
 
 d <- cbind(Adjusted_R2 = VAR_meantemp_adjr, AIC = lagselect$criteria[,10][0])
@@ -1129,6 +1177,7 @@ knitr::kable(d, digits = 4)
 
 
 #### windpseed
+
 ```{r}
 
 d <- cbind(Adjusted_R2 = VAR_meantemp_adjr, AIC = lagselect$criteria[,10][0])
@@ -1146,7 +1195,8 @@ knitr::kable(d, digits = 4)
 
 ### **Plot Forecast**
 
-First we plot forecasts based on the model being trained on the training data.
+Firstly, plot of forecasts are displayed, which are based on the model being trained on the training data.
+
 ```{r}
 plot(forecasts)
 ```
@@ -1160,7 +1210,7 @@ forecast[2]$forecast$meantemp |> autoplot() + autolayer(ts_week_test_meantemp)
 forecast[2]$forecast$wind_speed |>  autoplot() + autolayer(ts_week_test_windspeed)
 ```
 
-Then, we plot the prediction of test data alongside the actual test data.
+secondly, prediction of test data alongside the actual test data is visualized
 
 ```{r}
 ts_plot(forecast[2]$forecast$meantemp$mean, ts_week_test_meantemp)
@@ -1172,6 +1222,7 @@ ts_plot(forecast[2]$forecast$wind_speed$mean, ts_week_test_windspeed)
 
 
 ### **Granger Causality**
+
 ```{r}
 Granger_meantemp <- causality(VAR_est, cause = "meantemp")
 Granger_meantemp
@@ -1181,6 +1232,7 @@ Granger_meantemp
 Granger_windspeed <- causality(VAR_est, cause = "wind_speed")
 Granger_windspeed
 ```
+
 
 ### **Forecast Error Variance Decomposition (FEVD)**
 
@@ -1193,9 +1245,9 @@ plot(FEVD1)
 
 
 ## **Feedforward Neural Network**
-
 ### **Forecast**
-####  wind_speed
+
+#### wind_speed
 
 ```{r}
 set.seed(34)
@@ -1296,6 +1348,7 @@ RSQ_windspeed_NN
 
 
 Now present tables of report both of time series.
+
 #### meantemp
 
 
@@ -1353,9 +1406,9 @@ ts_plot(xts_temp, xts_temp_2)
 ```
 
 
-## LSTM Neural Network
+## **LSTM Neural Network**
 
-
+The long-short term memory model is used in the following.
 
 
 ```{r}
@@ -1598,6 +1651,8 @@ LSTM_windspeed <- c(RMSE_windspeed_LSTM,
                    RSQ_windspeed_LSTM)
 
 df_eval <- data.frame(metrics_list, ARMA_meantemp, VAR_meantemp, VAR_windspeed, NN_meantemp, NN_windspeed, LSTM_meantemp, LSTM_windspeed)
+
+df_eval[, sapply(df_eval, is.numeric)] <- apply(df_eval[, sapply(df_eval, is.numeric)], 2, round, 3)
 ```
 
 Note that for the SARMA and Nueral Network models, the original data is used, while weekly aggregated data is used for VAR model.
@@ -1607,8 +1662,9 @@ Note that for the SARMA and Nueral Network models, the original data is used, wh
 #knitr::kable(df_eval, col.names = names(df_eval))
 #df_eval
 htmlTable(df_eval,
+          digits = 3,
           cgroup = c("Metrics","ARMA","VAR","NN", "LSTM"),
           n.cgroup = c(1,1,2,2,2),
-          digits = 3
+          
 )
 ```
