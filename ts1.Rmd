@@ -283,7 +283,7 @@ From the initial plot I judge that there is seasonality.
 For more delicate observation to find if there is more granular periods of seasonality, I use seasonality plots.
 Before that, I aggregate data weekly, monthly, and quarterly.
 
-### **Seasonality Plots** {#seasplots}
+### Seasonality Plots {#seasplots}
 
 ```{r}
 # Weekly mean temperature
@@ -353,7 +353,7 @@ forecast::ggseasonplot(ts_quar_train_meantemp, year.labels=TRUE, year.labels.lef
 
 Judging from the plots, all months seem to have seasonalities, with stronger ones in second and third quarters of each year.
 
-### **Deseasonalize** {#deseas}
+### Deseasonalize {#deseas}
 
 If one intends to remove different periods of seasonality together, he can use the `forecast::msts` function.
 For instance in below, weekly and yearly seasonality are removed together.
@@ -765,7 +765,7 @@ checkresiduals(forecast_ts_train_adj_det_meantemp)
 forecast_ts_train_adj_det_meantemp
 ```
 
-### **Evaluate**
+### Evaluate
 
 Based on the results from the forecast of original data (case 1), we have:
 
@@ -833,7 +833,7 @@ d <- cbind(R2 = RSQ_ARMA, RMSE = RMSE_ARMA, MAE = MAE_ARMA)
 knitr::kable(d, digits = 4)
 ```
 
-### **Plot Forecast**
+### Plot Forecast
 
 1. Original time series of meantemp
 
@@ -1086,7 +1086,7 @@ summary(VAR_est$varresult)
 ```
 
 
-### **Evaluate**
+### Evaluate
 
 Based on the model summary, the value of metrics obtained by the model can be observed, for lag 10:
 
@@ -1220,7 +1220,7 @@ knitr::kable(d, digits = 4)
 ```
 
 
-### **Plot Forecast**
+### Plot Forecast
 
 Firstly, plot of forecasts are displayed, which are based on the model being trained on the training data.
 
@@ -1248,7 +1248,7 @@ ts_plot(forecast[2]$forecast$wind_speed$mean, ts_week_test_windspeed)
 ```
 
 
-### **Granger Causality**
+### Granger Causality
 
 ```{r}
 Granger_meantemp <- causality(VAR_est, cause = "meantemp")
@@ -1261,7 +1261,9 @@ Granger_windspeed
 ```
 
 
-### **Forecast Error Variance Decomposition (FEVD)**
+### FEVD
+
+Forecast Error Variance Decomposition (FEVD)
 
 ```{r}
 FEVD1 <- fevd(VAR_est, n.ahead = 50)
@@ -1272,8 +1274,7 @@ plot(FEVD1)
 
 
 ## **Feedforward Neural Network**
-### **Forecast**
-
+### Forecast
 #### wind_speed
 
 ```{r}
@@ -1317,7 +1318,7 @@ forecast_meantemp <- forecast(fit_meantemp, h = 114, PI = T)
 
 
 
-### **Evluate**
+### Evluate
 
 #### meantemp
 
@@ -1400,7 +1401,7 @@ knitr::kable(d, digits = 4)
 
 
 
-### **Forecast Plots**
+### Plot Forecast
 
 First we plot forecasts based on the model being trained on the training data.
 
@@ -1564,6 +1565,8 @@ lstm_forecast <- function(x_test, model, scaling_factors){
 
 
 
+### Forecast 
+#### meantemp
 
 ```{r}
 # remove the first row of df_test, as it is common with df_train
@@ -1583,49 +1586,20 @@ x_test <- kerasize_pred_input(data_meantemp_norm, lag = 114, pred = 114)
 
 ```
 
+
+
 ```{r}
 
 model <- lstm_build_model(x_data, y_data)
 ```
 
 ```{r}
-prediction <- lstm_forecast(x_test, model, scaling_factors)
+prediction_meantemp <- lstm_forecast(x_test, model, scaling_factors)
 ```
 
 
 
-
-
-
-
-
-
-```{r}
-# If whole data was predicted
-#temp <- as.data.frame(rbind(df_train,df_test))
-#xts_meantemp_pred <- xts(prediction$forecast, #order.by=temp$date, "%Y-%m-%d")
-#xts_all <- xts(temp$meantemp, order.by=temp$date, #"%Y-%m-%d")
-#ts_plot(xts_meantemp_pred, xts_all)
-xts_temp <- xts(ts_test_meantemp, 
-                order.by=df_test$date, 
-                "%Y-%m-%d")
-xts_temp_2 <- xts(prediction$forecast, 
-                  order.by=df_test$date, 
-                  "%Y-%m-%d")
-#xts_temp
-#xts_temp_2
-ts_plot(xts_temp, xts_temp_2)
-
-```
-
-```{r}
-predicted <- as.numeric(prediction$forecast)
-actual <- as.numeric(ts_test_meantemp)
-RMSE_meantemp_LSTM <- rmse(predicted, actual)
-MAE_meantemp_LSTM <- mae(predicted, actual)
-RSQ_meantemp_LSTM <- rsq(actual, predicted)
-```
-
+#### windspeed
 
 ```{r}
 data_windspeed <- ts(c(ts_train_windspeed, ts_test_windspeed), 
@@ -1641,21 +1615,65 @@ x_test <- kerasize_pred_input(data_windspeed_norm, lag = 114, pred = 114)
 ```
 
 ```{r}
-
 model <- lstm_build_model(x_data, y_data)
 ```
 
 ```{r}
-prediction <- lstm_forecast(x_test, model, scaling_factors)
+prediction_windspeed <- lstm_forecast(x_test, model, scaling_factors)
 ```
 
+### Evaluate
+#### meantemp
+
 ```{r}
-predicted <- as.numeric(prediction$forecast)
-actual <- as.numeric(ts_test_windspeed)
-RMSE_windspeed_LSTM <- rmse(predicted, actual)
-MAE_windspeed_LSTM <- mae(predicted, actual)
-RSQ_windspeed_LSTM <- rsq(actual, predicted)
+predicted_meantemp <- as.numeric(prediction_meantemp$forecast)
+actual_meantemp <- as.numeric(ts_test_meantemp)
+RMSE_meantemp_LSTM <- rmse(predicted_meantemp, actual_meantemp)
+MAE_meantemp_LSTM <- mae(predicted_meantemp, actual_meantemp)
+RSQ_meantemp_LSTM <- rsq(predicted_meantemp, actual_meantemp)
 ```
+
+
+#### windspeed
+
+
+
+```{r}
+predicted_windspeed <- as.numeric(prediction_windspeed$forecast)
+actual_windspeed <- as.numeric(ts_test_windspeed)
+RMSE_windspeed_LSTM <- rmse(predicted_windspeed, actual_windspeed)
+MAE_windspeed_LSTM <- mae(predicted_windspeed, actual_windspeed)
+RSQ_windspeed_LSTM <- rsq(predicted_windspeed, actual_windspeed)
+```
+
+
+#### Plot Forecast
+#### meantemp
+
+```{r}
+xts_temp <- xts(ts_test_meantemp, 
+                order.by=df_test$date, 
+                "%Y-%m-%d")
+xts_temp_2 <- xts(prediction_meantemp$forecast, 
+                  order.by=df_test$date, 
+                  "%Y-%m-%d")
+
+ts_plot(xts_temp, xts_temp_2)
+```
+
+#### windspeed
+
+```{r}
+xts_temp <- xts(ts_test_windspeed, 
+                order.by=df_test$date, 
+                "%Y-%m-%d")
+xts_temp_2 <- xts(prediction_windspeed$forecast, 
+                  order.by=df_test$date, 
+                  "%Y-%m-%d")
+
+ts_plot(xts_temp, xts_temp_2)
+```
+
 
 
 ## **Compare Metrics**
