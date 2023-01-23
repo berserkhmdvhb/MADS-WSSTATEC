@@ -633,20 +633,29 @@ The seasonal autoregressive integrated moving average (SARIMA) is used in the fo
 - D: Order of seasonal-differencing
 - Q: Moving average lag order
 
-1. Forecast original time series of meantemp, as the original data has very high frequency, which makes it unsuitable for ARMA.
+The function returns the best ARIMA model according to either AIC.
+Since the runtime of the function is very long, the best parameters found are stored, and then they are used as both minimum and maximum option, although the `auto.arima` function nonetheless tries some initial fixed orders before using the predefined lags. Therefore, the options are reduced but not to 1 combination.
+
+
+1. Forecast original time series of `meantemp`, as the original data has very high frequency, which makes it unsuitable for ARMA.
 For this case, I set `seasonal=TRUE`, as in subsequent cases I use data that I seasonally adjusted them already.
 Setting `seasonal=TRUE` makes the model more time-consuming. 
 
 
-```{r}
+```{r include=FALSE, warning=FALSE}
+#the parameter `xreg` is used, which is generally for specifying exogenous variables, but it can also be used to pass in a matrix with columns corresponding to the values of p, d, q, P, D and Q.
 
 
-#forecast_ts_train_meantemp = auto.arima(ts_train_meantemp,
-#                            trace = TRUE, 
-#                            seasonal=TRUE,
-#                            stepwise=FALSE,
-#                            approximation=FALSE)
-#checkresiduals(forecast_ts_train_meantemp)
+p = 2
+d = 1
+q = 3
+P = 0
+D = 1
+Q = 0
+
+# Create a matrix with columns corresponding to p, d, q, P, D and Q
+xreg_matrix = cbind(rep(p, length(ts_train_meantemp)), rep(d, length(ts_train_meantemp)), rep(q, length(ts_train_meantemp)),
+                 rep(P, length(ts_train_meantemp)), rep(D, length(ts_train_meantemp)), rep(Q, length(ts_train_meantemp)))
 ```
 
 ```{r}
@@ -656,18 +665,16 @@ forecast_ts_train_meantemp <- auto.arima(ts_train_meantemp,
                             start.p = 2,
                             start.q = 3,
                             max.p = 2,
-                            #max.d = 1,
                             max.q = 3,
                             start.P = 0,
                             start.Q = 0,
                             max.P = 0,
-                            #max.D = 1,
                             max.Q = 0,
                             trace = TRUE, 
                             seasonal=TRUE,
                             stepwise=TRUE,
                             approximation=FALSE
-                            #nmodels=
+                            #,xreg = xreg_matrix
                             )
 checkresiduals(forecast_ts_train_meantemp)
 ```
@@ -684,11 +691,21 @@ Setting `seasonal=TRUE` makes the model more time-consuming.
 
 
 ```{r}
-forecast_ts_week_train_meantemp = auto.arima(ts_week_train_meantemp,
-                            trace = TRUE, 
-                            seasonal=TRUE,
-                            stepwise=FALSE,
-                            approximation=FALSE)
+forecast_ts_week_train_meantemp = auto.arima(ts_week_train_meantemp, 
+                                             d = 1, 
+                                             D = 1, 
+                                             start.p = 4, 
+                                             start.q = 0, 
+                                             max.p = 4, 
+                                             max.q = 0, 
+                                             start.P = 1, 
+                                             start.Q = 0, 
+                                             max.P = 1, 
+                                             max.Q = 0, 
+                                             trace = TRUE,  
+                                             seasonal=TRUE, 
+                                             stepwise=FALSE, 
+                                             approximation=FALSE)
 checkresiduals(forecast_ts_week_train_meantemp)
 ```
 
@@ -701,11 +718,16 @@ forecast_ts_week_train_meantemp
 
 3. Forecast deseasonalized time series
 ```{r}
-forecast_ts_train_adj_meantemp = auto.arima(ts_train_adj_meantemp,
-                            trace = TRUE, 
-                            seasonal= FALSE,
-                            stepwise=FALSE,
-                            approximation=FALSE)
+forecast_ts_train_adj_meantemp = auto.arima(ts_train_adj_meantemp, 
+                                            trace = TRUE,  
+                                            seasonal= FALSE, 
+                                            stepwise=FALSE, 
+                                            approximation=FALSE, 
+                                            d = 1, 
+                                            start.p = 0, 
+                                            start.q = 1, 
+                                            max.p = 0, 
+                                            max.q = 1)
 checkresiduals(forecast_ts_train_adj_meantemp)
 ```
 
@@ -720,11 +742,16 @@ forecast_ts_train_adj_meantemp
 4. Forecast deseasonalized and detrended time series
 
 ```{r}
-forecast_ts_train_adj_det_meantemp = auto.arima(ts_train_adj_det_meantemp,
-                            trace = TRUE, 
-                            seasonal= FALSE,
-                            stepwise=FALSE,
-                            approximation=FALSE)
+forecast_ts_train_adj_det_meantemp = auto.arima(ts_train_adj_det_meantemp, 
+                                                trace = TRUE,
+                                                seasonal= FALSE, 
+                                                stepwise=FALSE, 
+                                                approximation=FALSE,
+                                                d = 0, 
+                                                start.p = 0, 
+                                                start.q = 1, 
+                                                max.p = 0, 
+                                                max.q = 1)
 checkresiduals(forecast_ts_train_adj_det_meantemp)
 ```
 
@@ -1653,6 +1680,8 @@ LSTM_windspeed <- c(RMSE_windspeed_LSTM,
 df_eval <- data.frame(metrics_list, ARMA_meantemp, VAR_meantemp, VAR_windspeed, NN_meantemp, NN_windspeed, LSTM_meantemp, LSTM_windspeed)
 
 df_eval[, sapply(df_eval, is.numeric)] <- apply(df_eval[, sapply(df_eval, is.numeric)], 2, round, 3)
+
+colnames(df_eval) <- lapply(colnames(df_eval), function(x) gsub("^.*_", "", x))
 ```
 
 Note that for the SARMA and Nueral Network models, the original data is used, while weekly aggregated data is used for VAR model.
