@@ -14,7 +14,7 @@ output:
 ---
 # **Import Libraries**
 
-```{r setup, warning=FALSE}
+```{r setup, messag=FALSE, warning=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(knitr) # for knitting markdown files
 library(dplyr)
@@ -67,7 +67,7 @@ library(htmlTable) # for showing tables
 
 ```
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 library(reticulate)
 Sys.unsetenv("RETICULATE_PYTHON") 
 use_virtualenv("~/.virtualenvs/r-reticulate")
@@ -83,9 +83,6 @@ colorize <- function(x, color) {
       x)
   } else x
 }
-```
-```{r}
-#webshot::install_phantomjs()
 ```
 
 
@@ -108,20 +105,16 @@ The dataset used for this project is [Daily Delhi Climate](https://www.kaggle.co
 
 ## **Goal and Procedure**
 
-The goal of this project is to analyze and forecast the mean temperature of Delhi, which is recorded in the `meantemp` column. For some models, the wind speed of Delhi is also predicted.
+The goal of this project is to analyze and forecast the mean temperature of Delhi, Indai, as well wind speed of there. The two mentioned time series are recorded in the `meantemp` column and `wind_speed` column respectively. For the ARIMA model, only `meantemp` is forecast.
 
 The following four forecasting models are used for this work:
 autoregressive–moving-average model (ARMA), vector autoregression (VAR), feedforward neural network (NN), and long-short term memory (LSTM) neural network.
-After importing the dataset, outliers are removed in [Preprocessing and Analysis Section](#preprocess) section. Then `meantemp` column is assigned to a time series object in [Construct Time Series](#initts) section for further processing.
-After detecting seasonalities using [plots](#seasplots), the time series is [seasonally adjusted](#deseas) using [X13-ARIMA-SEATS](https://cran.r-project.org/package=seasonal/vignettes/seas.pdf) decomposition model. Then, remaining trend is removed in [detrend](#detrend).
-
-Before forecasting the time series, I check for staionarity of time series, as stationarity is an assumption in ARIMA model.
-For this purpose, unit root tests are applied in [Stationarity](#stationary) section.
-
-Finally, I used ARIMA model to forecast the time series in [Forecast Time Series](#forecast) section.
+After importing the dataset, the data is processed in [Preprocessing and Analysis Section](#preprocess). In this section, outliers are removed, time series objects are created from columns of dataframe, seasonality and trend are studied, and correlation plots are visualized.
+In [Testing Stationary]{#stationary}, the stationarity of the time series is checked using stationary tests.
+Four forecasting models are used [Forecast Time Series](#forecast) section to forecast the two time series of `meantemp` and `wind_speed`.
+The ARMA model is used only for `meantemp`. In [Compare Metrics](#comp), all the models are compared using various evalution metrics.
 
 ```{r}
-
 df_train <- read_csv("data/DailyDelhiClimateTrain.csv")
 df_test <- read_csv("data/DailyDelhiClimateTest.csv")
 ```
@@ -142,7 +135,7 @@ df_test |> dplyr::glimpse()
 
 # **Visualize Data** {#viz}
 
-Below we can see interactive plot of the time series.
+Below we can see interactive plot of the `meantemp` time series.
 
 ```{r}
 p <- df_train |>
@@ -159,8 +152,23 @@ p
 
 ```
 
-# **Preprocessing** {#preprocess}
+The same plot for the `wind_speed` time series is also provided. 
+```{r}
+p <- df_train |>
+  ggplot( aes(x=date, y=wind_speed)) +
+    geom_area(fill="#69b3a2", alpha=0.5) +
+    geom_line(color="#69b3a2") +
+    ylab("bitcoin price ($)") +
+    theme_ipsum()
 
+# Turn it interactive with ggplotly
+p <- ggplotly(p)
+#p
+p
+
+```
+
+# **Preprocessing** {#preprocess}
 ## **Treat Outliers: Manual** {#outlilermanual}
 
 Evidenced by the plot of time series, an outlier at the last observation (last row of dataframe) can be detected. It causes an abrupt decrease in value of temperature. This would lead to problems in further analysis and forecasting models. Therefore, last observation's value is replaced with its previous one. In [Treat Outliers: Automatic](#outlierauto), an automatic procedure of treating outliers is performed.
@@ -893,11 +901,11 @@ ts_plot(xts_temp, xts_temp_2)
 
 
 
-I confronted some issue adding the seasonality and trend componend of the adjusted versions to the original time series. Notwithstanding, judging by the results, the processed original data (without deseaosnalisation and without detrending) is a proper input to the ARMA model, as the function handles seasonalities by itself, and the results demonstrate a promising forecasting performance. Therefore, henceforth the processed time series but with no adjustment are used for the subsequent forecasting parts of this work.
+I confronted some issue adding the seasonality and trend componend of the adjusted versions to the original time series. Notwithstanding, judging by the results, the processed but unadjusted original data (without deseaosnalisation and without detrending) was a proper input to the ARMA model, as the function handles seasonalities by itself, and the results demonstrate a promising forecasting performance. Therefore, henceforth the processed time series but with no adjustment are used for the subsequent forecasting parts of this work, as subsequent models also handle seasonality.
 
 ## **Vector autoregressive (VAR)** {#var}
 
-The vector autoregressiv the multivariate time series by using both the columns `meantemp` and `wind_speed`.
+The vector autoregressive can be used to model the multivariate time series consisting of both the columns `meantemp` and `wind_speed`.
 
 The `wind_speed` is plotted interactively in the following:
 
@@ -968,7 +976,6 @@ ts_plot(xts_test_windspeed)
 
 
 ```{r}
-
 xts_test_windspeed <- tsclean(xts_test_windspeed)
 ts_test_windspeed <- ts_ts(xts_test_windspeed)
 
@@ -1012,33 +1019,21 @@ ts_week_train_windspeed <- ts_ts(xts_week_train_windspeed)
 xts_week_test_windspeed <- apply.weekly(xts_test_windspeed, sum)
 ts_week_test_windspeed <- na.remove(ts_ts(xts_week_test_windspeed))
 #ts_week_test_windspeed <- as.ts(xts_week_test_windspeed)
-
-
 ```
 
 
-```{r}
-ts_week_test_meantemp
+The time series of `wind_speed` is visualized in the following:
 
-```
-
-Both original data and weekly aggregated one are visualized in the following:
-
-```{r}
-ts_plot(ts_week_train_windspeed)
-```
 
 ```{r}
 ts_plot(xts_train_windspeed)
 ```
 
-Initially, the original time series is fed to the model, yet it yielded porr performance, which I speculate to be attributed to many fluctuations and seasonality components. On the other hand, using the weekly aggregated data leads to a significant imporve.
-
-Both time sreies are merged and then fed to the VAR model. NA values are also removed from the merged time series.
+Both time series (`meantemp` and `wind_speed`) are merged and then fed to the VAR model. NA values are also removed from the merged time series.
 
 ```{r}
 #VAR_data <- ts.union(ts_train_meantemp, ts_train_windspeed)
-VAR_data <- ts.union(ts_week_train_meantemp, ts_week_train_windspeed)
+VAR_data <- ts.union(ts_train_meantemp, ts_train_windspeed)
 colnames(VAR_data) <- cbind("meantemp","wind_speed")
 #v1 <- cbind(ts_week_train_meantemp, ts_week_train_windspeed)
 #colnames(v1) <- cbind("meantemp","wind_speed")
@@ -1066,34 +1061,41 @@ lagselect$selection
 lagselect$criteria
 ```
 
-Now that we have merged the column `meantemp` with `wind_speed`, we use VAR models with lag to be 10.
+The results indicate that the lag with least `AIC` is 8.
+Now that we have merged the time series `meantemp` with `wind_speed`, we use VAR models on the merged time series Moreover, a cross-validated automatic selection of lags are performed by the model, with `AIC` as the chosen information criterion. Evidenced by the lag chosen by the model, it coincides with earlier discussion about lag. A seasonal lag was also included, with frequency chosen as 12, since monthly seasonalities were detected in [seasonal plotsplots](#seasplots).
 
 
 
 ```{r}
-VAR_est <- VAR(y = VAR_data, season=8, type="both", p=10)
+VAR_est <- vars::VAR(y = VAR_data, season=12, type="both", lag.max=50, ic="AIC")
 VAR_est
 
 ```
 
 ```{r}
 summary(VAR_est)
-
 ```
 
 ```{r}
 summary(VAR_est$varresult)
 ```
-
+```{r}
+#VAR_est |> diagnostics()
+```
 
 ### Evaluate
 
-Based on the model summary, the value of metrics obtained by the model can be observed, for lag 10:
+Based on the model summary, the value of metrics obtained by the model can be observed, for different lag:
 
 ```{r}
-lagselect$criteria[,10]
+lagselect$criteria
 ```
 
+The optimal number was 8, with the following values:
+
+```{r}
+lagselect$criteria[,8]
+```
 
 The $R^2$ score of the model after applying can also be reported for both of the time series used:
 
@@ -1116,15 +1118,17 @@ A Portmanteau test is provided to test that the residuals are uncorrelated.
 ```{r}
 serial.test(VAR_est, lags.pt=10, type="PT.asymptotic")
 ```
+The null hypothesis of no autocorrelation is rejected since the p-value is lower than the significance level of 0.05. This suggests the model is not performing as expected...
+
+
+
+
 
 ```{r}
-forecasts <- predict(VAR_est, h=114)
+forecast <- VAR_est |> forecast(h=114)
 ```
 
 
-```{r}
-forecast <- VAR_est |> forecast(h=18)
-```
 
 
 
@@ -1132,16 +1136,14 @@ forecast <- VAR_est |> forecast(h=18)
 
 
 
-
-
-Now we use test data to evaluate predictions:
+Now test data is used to evaluate predictions:
 
 ```{r}
 predicted_meantemp <- as.numeric(forecast[2]$forecast$meantemp$mean)
-actual_meantemp <- as.numeric(ts_week_test_meantemp)
+actual_meantemp <- as.numeric(ts_test_meantemp)
 
 predicted_windspeed <- as.numeric(forecast[2]$forecast$wind_speed$mean)
-actual_winspeed <- as.numeric(ts_week_test_windspeed)
+actual_winspeed <- as.numeric(ts_test_windspeed)
 ```
 
 
@@ -1187,14 +1189,12 @@ RSQ_windspeed_VAR
 #### meantemp
 
 ```{r}
-
 d <- cbind(Adjusted_R2 = VAR_meantemp_adjr, AIC = lagselect$criteria[,10][0])
 # at most 4 decimal places
 knitr::kable(d, digits = 4)
 ```
 
 ```{r}
-
 d <- cbind(R2 = RSQ_meantemp_VAR, RMSE = RMSE_meantemp_VAR, MAE = MAE_meantemp_VAR)
 # at most 4 decimal places
 knitr::kable(d, digits = 4)
@@ -1206,7 +1206,6 @@ knitr::kable(d, digits = 4)
 #### windpseed
 
 ```{r}
-
 d <- cbind(Adjusted_R2 = VAR_meantemp_adjr, AIC = lagselect$criteria[,10][0])
 # at most 4 decimal places
 knitr::kable(d, digits = 4)
@@ -1225,30 +1224,36 @@ knitr::kable(d, digits = 4)
 Firstly, plot of forecasts are displayed, which are based on the model being trained on the training data.
 
 ```{r}
-plot(forecasts)
+plot(forecast)
 ```
 
 ```{r}
-forecast[2]$forecast$meantemp |> autoplot() + autolayer(ts_week_test_meantemp)
+forecast[2]$forecast$meantemp |> autoplot() + autolayer(ts_test_meantemp)
 
 ```
 
 ```{r}
-forecast[2]$forecast$wind_speed |>  autoplot() + autolayer(ts_week_test_windspeed)
+forecast[2]$forecast$wind_speed |>  autoplot() + autolayer(ts_test_windspeed)
 ```
 
 secondly, prediction of test data alongside the actual test data is visualized
 
 ```{r}
-ts_plot(forecast[2]$forecast$meantemp$mean, ts_week_test_meantemp)
+xts_temp <- xts(ts_test_meantemp, order.by=df_test$date, "%Y-%m-%d")
+xts_temp_2 <- xts(forecast[2]$forecast$meantemp$mean, order.by=df_test$date, "%Y-%m-%d")
+ts_plot(xts_temp, xts_temp_2)
+```
+```{r}
+xts_temp <- xts(ts_test_windspeed, order.by=df_test$date, "%Y-%m-%d")
+xts_temp_2 <- xts(forecast[2]$forecast$wind_speed$mean, order.by=df_test$date, "%Y-%m-%d")
+ts_plot(xts_temp, xts_temp_2)
 ```
 
-```{r}
-ts_plot(forecast[2]$forecast$wind_speed$mean, ts_week_test_windspeed)
-```
 
 
 ### Granger Causality
+
+Granger causality is a statistical concept that is used to determine the causal relationship between two time series. The basic idea is that if past values of one time series ($X$) are useful in predicting the future values of another time series ($Y$), then $X$ is said to Granger-cause $Y$. This is typically tested using a statistical test such as a Granger causality test.
 
 ```{r}
 Granger_meantemp <- causality(VAR_est, cause = "meantemp")
@@ -1260,22 +1265,32 @@ Granger_windspeed <- causality(VAR_est, cause = "wind_speed")
 Granger_windspeed
 ```
 
+Judging by the tests, there is no causality relationshiop between the two time series.
 
 ### FEVD
 
-Forecast Error Variance Decomposition (FEVD)
+Forecast error variance decomposition (FEVD) is a technique that decomposes the variance of the forecast error into the contributions from specific exogenous shocks.
+
+Two practical applications is that this technique
+
+- Demonstrates how significant a shock is in explaining the variations of the variables in the model.
+
+- Demonstrates how that significance varies over time. For example, some shocks may not be responsible for variations in the short-run but may cause longer-term fluctuations.
 
 ```{r}
-FEVD1 <- fevd(VAR_est, n.ahead = 50)
+FEVD1 <- fevd(VAR_est, n.ahead = 150)
 FEVD1
 plot(FEVD1)
 ```
 
-
+Evidenced by the plots, figure above implies that forecast error of the `meantemp` at short horizons (around 7 steps or less) is attributed to itself. However, in longer horizons, `wind_speed` will have a salient effect on the errors.
+From figure below one can observe that the errors of `wind_speed` is attributed to itself in both short and long horizons.
 
 ## **Feedforward Neural Network**
 ### Forecast
 #### wind_speed
+
+`nnetar` function creates a feed-forward neural networks  forecasting univariate time series. The default parameters are a single hidden layer and lagged inputs
 
 ```{r}
 set.seed(34)
@@ -1435,9 +1450,22 @@ ts_plot(xts_temp, xts_temp_2)
 
 
 ## **LSTM Neural Network**
+RNNs are prudent candidates among neural network models, as they are designed for modelling sequential data, of which time series is the quintessential example. Moreover, RNNs can effectively remember relevant long-term context from the input features. 
+Remembering long-term context is not possible in multi-layer perceptrons (MLPs) as in their structure it is often presumed that all the inputs and outputs are independent of each other. 
+the other hand, in RNN the behavior of hidden neurons might not just
+be determined by the activations in previous hidden layers, but also by the activations at earlier times. Furthermore, the activations of hidden and output neurons will not be determined just by the current input to the network, but also by earlier inputs.
+
 
 The long-short term memory model is used in the following.
+The most effective sequence models used in practical applications are called gated RNNs (GRNNs). These include the long short-term memory and networks based on the gated recurrent unit. Generally, as RNNs are equipped with learning long-term dependencies, they have the issue of vanishing or exploding gradients. GRNNs are based on the idea of creating paths through time that have derivatives that neither vanish nor explode, which was made possible by including connection weights that may alter at each time-step. This allows them to tackle the challenge of vanishing or exploding gradients.
+Once that information has been used,
+however, it might be useful for the neural network to forget the old state. The intuition is that although remembering past state of the network (either earlier inputs or outputs) is useful, but not all states are useful, hence it would be an intelligent and more human-wise behavior that the model decides when to clear the past state, which is what GRNNs do. 
 
+The difference between a GRNN and LSTM is that GRNNs have input gate and output gate, while LSTM has an additional forget gate.
+
+
+Only for this model, the data is normalized with standard scaler.
+After that, the data is altered to have the required format for the LSTM model implemented using Keras library.
 
 ```{r}
 
@@ -1647,7 +1675,10 @@ RSQ_windspeed_LSTM <- rsq(predicted_windspeed, actual_windspeed)
 ```
 
 
-#### Plot Forecast
+### Plot Forecast
+
+
+
 #### meantemp
 
 ```{r}
@@ -1676,24 +1707,22 @@ ts_plot(xts_temp, xts_temp_2)
 
 
 
-## **Compare Metrics**
+## **Compare Metrics** {#comp}
 ```{r}
 metrics_list <- c("RMSE", "MAE", "RSQ")
-ARMA_meantemp <- c(RMSE_ARMA, MAE_ARMA, RSQ_ARMA)
+ARMA_meantemp <- c(RMSE_ARMA, MAE_ARMA)
 
-VAR_meantemp <- c(RMSE_meantemp_VAR, MAE_meantemp_VAR, RSQ_meantemp_VAR)
-VAR_windspeed <- c(RMSE_windspeed_VAR, MAE_windspeed_VAR, RSQ_windspeed_VAR)
+VAR_meantemp <- c(RMSE_meantemp_VAR, MAE_meantemp_VAR)
+VAR_windspeed <- c(RMSE_windspeed_VAR, MAE_windspeed_VAR)
 
-NN_meantemp <- c(RMSE_meantemp_NN, MAE_meantemp_NN, RSQ_meantemp_NN)
-NN_windspeed <- c(RMSE_windspeed_NN, MAE_windspeed_NN, RSQ_windspeed_NN)
+NN_meantemp <- c(RMSE_meantemp_NN, MAE_meantemp_NN)
+NN_windspeed <- c(RMSE_windspeed_NN, MAE_windspeed_NN)
 
 LSTM_meantemp <- c(RMSE_meantemp_LSTM,
-                   MAE_meantemp_LSTM, 
-                   RSQ_meantemp_LSTM)
+                   MAE_meantemp_LSTM)
 
 LSTM_windspeed <- c(RMSE_windspeed_LSTM,
-                   MAE_windspeed_LSTM, 
-                   RSQ_windspeed_LSTM)
+                   MAE_windspeed_LSTM)
 
 df_eval <- data.frame(metrics_list, ARMA_meantemp, VAR_meantemp, VAR_windspeed, NN_meantemp, NN_windspeed, LSTM_meantemp, LSTM_windspeed)
 
@@ -1701,8 +1730,6 @@ df_eval[, sapply(df_eval, is.numeric)] <- apply(df_eval[, sapply(df_eval, is.num
 
 colnames(df_eval) <- lapply(colnames(df_eval), function(x) gsub("^.*_", "", x))
 ```
-
-Note that for the SARMA and Nueral Network models, the original data is used, while weekly aggregated data is used for VAR model.
 
 ```{r}
 #table(df_eval) |> htmlTable
@@ -1715,3 +1742,10 @@ htmlTable(df_eval,
           
 )
 ```
+
+# **Conclusion**
+
+1. Among all the models, the feedforward neural network outperformed the other models.
+2. Based on Granger causality tests, there is no causal relationship between `meantemp` and `wind_speed` time series, i.e., between mean temperature and wind speed of Delhi, India.
+3. Injecting a shock in `meantemp` would be only affected by variations of the `meantemp` time series, whereas injecting a shock in `wind_speed` 
+
