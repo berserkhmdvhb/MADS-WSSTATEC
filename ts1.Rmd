@@ -1709,7 +1709,7 @@ ts_plot(xts_temp, xts_temp_2)
 
 ## **Compare Metrics** {#comp}
 ```{r}
-metrics_list <- c("RMSE", "MAE", "RSQ")
+metrics_list <- c("RMSE", "MAE")
 ARMA_meantemp <- c(RMSE_ARMA, MAE_ARMA)
 
 VAR_meantemp <- c(RMSE_meantemp_VAR, MAE_meantemp_VAR)
