@@ -105,14 +105,16 @@ The dataset used for this project is [Daily Delhi Climate](https://www.kaggle.co
 
 ## **Goal and Procedure**
 
-The goal of this project is to analyze and forecast the mean temperature of Delhi, Indai, as well wind speed of there. The two mentioned time series are recorded in the `meantemp` column and `wind_speed` column respectively. For the ARIMA model, only `meantemp` is forecast.
+The goal of this project is to analyze and forecast the mean temperature of Delhi, India, as well as wind speed of there. The two mentioned quantities are recorded in the `meantemp` column and `wind_speed` column respectively. 
+As these columns are recorded in time, they are regarded as time series.
+For the ARIMA model, only `meantemp` is forecasted.
 
 The following four forecasting models are used for this work:
 autoregressive–moving-average model (ARMA), vector autoregression (VAR), feedforward neural network (NN), and long-short term memory (LSTM) neural network.
 After importing the dataset, the data is processed in [Preprocessing and Analysis Section](#preprocess). In this section, outliers are removed, time series objects are created from columns of dataframe, seasonality and trend are studied, and correlation plots are visualized.
-In [Testing Stationary]{#stationary}, the stationarity of the time series is checked using stationary tests.
+In [Testing Stationary](#stationary), the stationarity of the time series is checked using stationary tests.
 Four forecasting models are used [Forecast Time Series](#forecast) section to forecast the two time series of `meantemp` and `wind_speed`.
-The ARMA model is used only for `meantemp`. In [Compare Metrics](#comp), all the models are compared using various evalution metrics.
+The ARMA model is used only for `meantemp`. In [Compare Metrics](#comp), all the models are compared using different evaluation metrics.
 
 ```{r}
 df_train <- read_csv("data/DailyDelhiClimateTrain.csv")
@@ -171,7 +173,7 @@ p
 # **Preprocessing** {#preprocess}
 ## **Treat Outliers: Manual** {#outlilermanual}
 
-Evidenced by the plot of time series, an outlier at the last observation (last row of dataframe) can be detected. It causes an abrupt decrease in value of temperature. This would lead to problems in further analysis and forecasting models. Therefore, last observation's value is replaced with its previous one. In [Treat Outliers: Automatic](#outlierauto), an automatic procedure of treating outliers is performed.
+Evidenced by the plot of time series, an outlier at the last observation (last row of dataframe) can be detected. It causes an abrupt decrease in value of temperature. This would lead to problems in further analysis and forecasting models. Therefore, last observation's value is replaced with its previous one. In [Treat Outliers: Automatic](#outlierauto), an automatic procedure of treating outliers is performed to remove further outliers.
 
 
 ```{r}
@@ -217,7 +219,7 @@ date_range[!date_range %in% df_train$date]
 ## **Construct Time Series** {#initts}
 
 Thee `meantemp` column is used to create time series data.
-The time series is assigned to `xts` objects. But since many functions later require `ts` object, each time a `xts` object is defined, a `ts` counterpart is created for further possible use. The conversion is performed using  `txbox::ts_ts` function.
+The time series is assigned to `xts` objects. But since many functions later require `ts` object, each time a `xts` object is defined, a `ts` counterpart is created for further possible use. The conversion from `xts` to `ts` is performed using  `txbox::ts_ts` function.
 
 
 ```{r}
@@ -249,7 +251,7 @@ tail(xts_train_meantemp)
 
 ```
 
-Convert XTS objects to TS objects:
+Convert `xts` objects to `ts` objects:
 
 ```{r}
 ts_train_meantemp <- ts_ts(xts_train_meantemp)
@@ -1265,7 +1267,7 @@ Granger_windspeed <- causality(VAR_est, cause = "wind_speed")
 Granger_windspeed
 ```
 
-Judging by the tests, there is no causality relationshiop between the two time series.
+Judging by the tests, there is no causality relationship between the two time series.
 
 ### FEVD
 
@@ -1283,8 +1285,8 @@ FEVD1
 plot(FEVD1)
 ```
 
-Evidenced by the plots, figure above implies that forecast error of the `meantemp` at short horizons (around 7 steps or less) is attributed to itself. However, in longer horizons, `wind_speed` will have a salient effect on the errors.
-From figure below one can observe that the errors of `wind_speed` is attributed to itself in both short and long horizons.
+Evidenced by the plots, figure above implies that forecast error of the `meantemp` is attributed to itself. Same goes for `wind_speed`.
+However, when the VAR model is fitted on weekly aggregated data, then injecting shock in `meantemp` would also be influenced by `wind_speed`. This investigation was not added in code and plots, to keep the work concise.
 
 ## **Feedforward Neural Network**
 ### Forecast
@@ -1747,5 +1749,5 @@ htmlTable(df_eval,
 
 1. Among all the models, the feedforward neural network outperformed the other models.
 2. Based on Granger causality tests, there is no causal relationship between `meantemp` and `wind_speed` time series, i.e., between mean temperature and wind speed of Delhi, India.
-3. Injecting a shock in `meantemp` would be only affected by variations of the `meantemp` time series, whereas injecting a shock in `wind_speed` 
+3. Injecting a shock in `meantemp` would be only affected by variations of the `meantemp` time series. Similarly, injecting a shock in `wind_speed` would also be only affected by variations of `wind_speed`. However, weekly aggregated data would leave footprint of `wind_speed` when injecting shock in `meantemp`. 
 
