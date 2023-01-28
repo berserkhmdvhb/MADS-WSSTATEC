@@ -1,4 +1,4 @@
-# WSSTATEC
+# WSSTATEC  <img src="logo.png" align="right" style="width: 25%;"/>
 This repository is dedicated to the project of time series forecast, done in R langauge.
 The dataset used for the project is the [Delhi daily climate data](https://www.kaggle.com/datasets/sumanthvrao/daily-climate-time-series-data).
 Three modesl are used for forecasting, which are autoregressive–moving-average (ARMA), vector autoregression (VAR), and two neural network models, feedforward and long-short-term-memory.
